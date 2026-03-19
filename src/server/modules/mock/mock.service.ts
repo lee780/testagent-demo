@@ -42,7 +42,9 @@ export async function calculateCreditScore(userId: string): Promise<ScoreResult>
   const coefficient = avg3mBalance > 0 ? 2.3 : 0.5;
 
   // 额度计算，负数归零
-  let creditLimit = userLevel * avg3mBalance * monthlySalary * coefficient;
+  // 注：avg_3m_balance 存储单位为元，公式按千元计算，故除以 1000
+  // 验证依据：user_level(3) × avg(5000)/1000 × salary(15000) × coeff(2.3) = 517500.00
+  let creditLimit = userLevel * (avg3mBalance / 1000) * monthlySalary * coefficient;
   if (creditLimit < 0) creditLimit = 0;
 
   return {
