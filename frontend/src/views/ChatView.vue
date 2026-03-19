@@ -86,17 +86,13 @@
             </div>
 
             <div class="prompt-input-action-bar">
-              <button
-                class="action-btn upload-btn"
+              <button 
+                class="action-btn upload-btn" 
                 @click="triggerFileInput"
                 title="上传文件"
               >
                 <el-icon><Paperclip /></el-icon>
               </button>
-              <div class="mode-toggle" :class="testMode" @click="toggleMode" :title="testMode === 'standard' ? '当前：常规固化模式（点击切换为探索模式）' : '当前：探索性测试模式（点击切换为常规模式）'">
-                <span class="mode-icon">{{ testMode === 'standard' ? '🔒' : '🔭' }}</span>
-                <span class="mode-label">{{ testMode === 'standard' ? '固化模式' : '探索模式' }}</span>
-              </div>
               <div class="spacer"></div>
               <button
                 class="action-btn send-btn"
@@ -249,17 +245,13 @@
               </div>
 
               <div class="prompt-input-action-bar">
-                <button
-                  class="action-btn upload-btn"
+                <button 
+                  class="action-btn upload-btn" 
                   @click="triggerFileInput"
                   title="上传文件"
                 >
                   <el-icon><Paperclip /></el-icon>
                 </button>
-                <div class="mode-toggle" :class="testMode" @click="toggleMode" :title="testMode === 'standard' ? '当前：常规固化模式（点击切换为探索模式）' : '当前：探索性测试模式（点击切换为常规模式）'">
-                  <span class="mode-icon">{{ testMode === 'standard' ? '🔒' : '🔭' }}</span>
-                  <span class="mode-label">{{ testMode === 'standard' ? '固化模式' : '探索模式' }}</span>
-                </div>
                 <div class="spacer"></div>
                 <!-- 发送/终止按钮 -->
                 <button
@@ -332,12 +324,6 @@ const messagesContainer = ref(null)
 const currentPlanData = ref(null)
 
 const downloadPanel = ref(null)
-
-// 测试模式：standard（固化）| explore（探索）
-const testMode = ref('standard')
-const toggleMode = () => {
-  testMode.value = testMode.value === 'standard' ? 'explore' : 'standard'
-}
 
 const hasMessages = computed(() => messages.value.length > 0)
 
@@ -483,8 +469,7 @@ const sendMessage = async () => {
       },
       body: JSON.stringify({
         message: finalMessage,
-        conversation_id: currentConversationId.value || undefined,
-        mode: testMode.value
+        conversation_id: currentConversationId.value || undefined
       })
     })
 
@@ -864,32 +849,6 @@ onMounted(() => {
   color: var(--text-secondary);
   line-height: 1.5;
 }
-
-.mode-toggle {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 14px;
-  border: 1px solid var(--border-color);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 500;
-  transition: all 0.2s;
-  user-select: none;
-  background: var(--input-bg);
-  color: var(--text-secondary);
-}
-.mode-toggle:hover {
-  border-color: #5b9bd5;
-  color: #5b9bd5;
-}
-.mode-toggle.explore {
-  border-color: #e6a817;
-  color: #e6a817;
-  background: rgba(230, 168, 23, 0.08);
-}
-.mode-icon { font-size: 13px; }
 
 .welcome-title {
   font-size: 22px;

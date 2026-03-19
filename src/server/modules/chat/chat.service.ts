@@ -84,13 +84,12 @@ export interface SSEStreamOptions {
   userId: string;
   conversationId?: string | null;
   uploadedFiles?: string[];
-  mode?: 'standard' | 'explore';
 }
 
 export async function* sendMessageStreaming(
   options: SSEStreamOptions
 ): AsyncGenerator<Record<string, unknown>> {
-  const { message, userId, uploadedFiles, mode } = options;
+  const { message, userId, uploadedFiles } = options;
   let { conversationId } = options;
   const logger = getLogger();
   const config = getConfig();
@@ -162,7 +161,6 @@ ${message}`;
     userId,
     conversationId,
     outputDir: config.agentOutputDir,
-    mode: mode ?? 'standard',
     onEvent: (event) => {
       // event is SSEEvent { type, data } from the bridge.
       // Map bridge types → frontend types that ChatView.vue expects.
