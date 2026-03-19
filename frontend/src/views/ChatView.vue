@@ -211,9 +211,6 @@
           <!-- 计划步骤展示组件 -->
           <PlanStepBar :planData="currentPlanData" />
           
-          <!-- 任务树/执行计划面板 (浮动在右侧，支持旧 phase 模式和新任务树模式) -->
-          <TaskTreePanel ref="taskTreePanel" :conversation-id="currentConversationId" />
-
           <!-- 生成文件下载面板 (固定在右侧) -->
           <FileDownloadPanel ref="downloadPanel" :conversation-id="currentConversationId" />
 
@@ -299,7 +296,6 @@ import api from '@/api'
 import { useChatStore } from '@/stores/chat'
 import MarkdownViewer from '@/components/MarkdownViewer.vue'
 import PlanStepBar from '@/components/PlanStepBar.vue'
-import TaskTreePanel from '@/components/TaskTreePanel.vue'
 import ToolCallCard from '@/components/ToolCallCard.vue'
 import FileDownloadPanel from '@/components/FileDownloadPanel.vue'
 import { SSEParser } from '@/utils/sse-parser.js'
@@ -327,8 +323,6 @@ const messagesContainer = ref(null)
 
 const currentPlanData = ref(null)
 
-// TaskTreePanel 组件引用（替代旧的独立状态变量）
-const taskTreePanel = ref(null)
 const downloadPanel = ref(null)
 
 const hasMessages = computed(() => messages.value.length > 0)
@@ -340,16 +334,9 @@ const isSending = ref(false)
 watch(currentConversationId, async (newId) => {
   if (isSending.value) return // 如果正在发送中，不触发自动加载，避免覆盖本地正在生成的流
 
-  // 重置 TaskTreePanel 状态
-  taskTreePanel.value?.reset()
-
   if (newId) {
     try {
-      // 并行加载消息和计划
-      const [messagesData, planData] = await Promise.all([
-        api.listMessages(newId, { limit: 1000 }),
-        api.getConversationPlan(newId).catch(() => null) // 计划可能不存在
-      ])
+      const messagesData = await api.listMessages(newId, { limit: 1000 })
 
       // 加载消息（从 metadata 恢复 events）
       messages.value = messagesData.map(msg => {
@@ -357,34 +344,11 @@ watch(currentConversationId, async (newId) => {
           role: msg.role,
           content: msg.content
         }
-        // 如果是 assistant 消息且有 metadata.events，恢复 events
         if (msg.role === 'assistant' && msg.metadata?.events) {
           baseMsg.events = msg.metadata.events
         }
         return baseMsg
       })
-
-      // 恢复任务树状态：从消息历史中重播 coordinator_event 事件
-      for (const msg of messages.value) {
-        if (msg.role === 'assistant' && msg.events) {
-          for (const event of msg.events) {
-            if (event.type === 'coordinator_event') {
-              taskTreePanel.value?.handleCoordinatorEvent(event.event_type, event.data)
-            }
-          }
-        }
-      }
-
-      // 加载计划（如果存在，恢复到旧 phase 模式）
-      if (planData) {
-        taskTreePanel.value?.handleCoordinatorEvent('plan_created', { plan: planData.plan })
-        if (planData.activePhase) {
-          taskTreePanel.value?.handleCoordinatorEvent('phase_started', { phase: planData.activePhase })
-        }
-        for (const p of planData.completedPhases || []) {
-          taskTreePanel.value?.handleCoordinatorEvent('phase_completed', { phase: p })
-        }
-      }
 
       await nextTick()
       scrollToBottom(true)
@@ -419,15 +383,6 @@ const mergeAdjacentTextEvents = (events) => {
       content: secondLast.content + last.content,
     })
   }
-}
-
-/**
- * Handle Coordinator events — delegates to TaskTreePanel component.
- * Supports both legacy phase events and new task_tree_* events.
- */
-const handleCoordinatorEvent = (eventType, data) => {
-  if (!eventType || !data) return
-  taskTreePanel.value?.handleCoordinatorEvent(eventType, data)
 }
 
 // 发送消息
@@ -580,9 +535,6 @@ const sendMessage = async () => {
           }
         } else if (parsed.type === 'title_generated') {
           chatStore.updateConversationTitle(parsed.conversation_id, parsed.title)
-        } else if (parsed.type === 'coordinator_event' && parsed.data) {
-          // 处理 Coordinator 事件
-          handleCoordinatorEvent(parsed.event_type, parsed.data)
         } else if (parsed.type === 'error') {
           throw new Error(parsed.message || '流式输出错误')
         }
