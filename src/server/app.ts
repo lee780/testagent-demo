@@ -8,6 +8,7 @@ import { registerAuthPlugin } from './plugins/auth.js';
 import { registerAuthRoutes } from './modules/auth/auth.routes.js';
 import { registerConversationRoutes } from './modules/conversation/conversation.routes.js';
 import { registerChatRoutes } from './modules/chat/chat.routes.js';
+import { registerMockRoutes } from './modules/mock/mock.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const logger = getLogger();
@@ -46,6 +47,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await registerAuthRoutes(app);
   await registerConversationRoutes(app);
   await registerChatRoutes(app);
+  await registerMockRoutes(app);
 
   logger.info('Fastify app built successfully');
 

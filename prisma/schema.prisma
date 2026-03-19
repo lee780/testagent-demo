@@ -133,6 +133,38 @@ model Task {
   @@map("tasks")
 }
 
+// ─── Mock 被测系统：MODEL_001 授信额度测算 ───────────────────────────────────
+
+model MockUserInfo {
+  userId    String @id @map("user_id")
+  userLevel Int    @map("user_level")
+
+  @@map("mock_user_info")
+}
+
+model MockAccountBalance {
+  userId       String  @id @map("user_id")
+  avg3mBalance Decimal @map("avg_3m_balance")
+
+  @@map("mock_account_balance")
+}
+
+model MockSocialSecurity {
+  userId             String @id @map("user_id")
+  socialSecurityFlag Int    @map("social_security_flag")
+
+  @@map("mock_social_security")
+}
+
+model MockSalarySummary {
+  userId        String  @id @map("user_id")
+  monthlySalary Decimal @map("monthly_salary")
+
+  @@map("mock_salary_summary")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 model AgentSession {
   id             String             @id @default(uuid())
   conversationId String             @map("conversation_id")
