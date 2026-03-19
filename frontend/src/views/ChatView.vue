@@ -165,6 +165,9 @@
           <!-- 任务树/执行计划面板 (浮动在右侧，支持旧 phase 模式和新任务树模式) -->
           <TaskTreePanel ref="taskTreePanel" :conversation-id="currentConversationId" />
 
+          <!-- 生成文件下载面板 (固定在右侧) -->
+          <FileDownloadPanel ref="downloadPanel" :conversation-id="currentConversationId" />
+
           <div class="bottom-input-wrapper">
             <div class="bottom-input-container">
               <!-- 文件预览区 -->
@@ -249,6 +252,7 @@ import MarkdownViewer from '@/components/MarkdownViewer.vue'
 import PlanStepBar from '@/components/PlanStepBar.vue'
 import TaskTreePanel from '@/components/TaskTreePanel.vue'
 import ToolCallCard from '@/components/ToolCallCard.vue'
+import FileDownloadPanel from '@/components/FileDownloadPanel.vue'
 import { SSEParser } from '@/utils/sse-parser.js'
 
 const chatStore = useChatStore()
@@ -276,6 +280,7 @@ const currentPlanData = ref(null)
 
 // TaskTreePanel 组件引用（替代旧的独立状态变量）
 const taskTreePanel = ref(null)
+const downloadPanel = ref(null)
 
 const hasMessages = computed(() => messages.value.length > 0)
 
@@ -568,6 +573,8 @@ const sendMessage = async () => {
     loading.value = false
     isSending.value = false
     currentReplyId.value = null
+    // Refresh download panel after every agent response
+    downloadPanel.value?.refresh()
   }
 }
 

@@ -41,6 +41,8 @@ export interface RunTestAgentParams {
   userId?: string;
   /** Conversation ID (for output files + session). */
   conversationId?: string;
+  /** Output directory for downloadable files. */
+  outputDir?: string;
   /** Custom instructions to append to system prompt. */
   customInstructions?: string;
   /** SSE event callback. */
@@ -73,6 +75,7 @@ export async function runTestAgent(params: RunTestAgentParams): Promise<RunTestA
     workspace: params.workspace,
     userId: params.userId,
     conversationId: params.conversationId,
+    outputDir: params.outputDir,
   });
 
   // 2. Event bridge

@@ -5,6 +5,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import { resolve } from 'node:path';
 import { getLogger } from '../../config/logger.js';
 import { getConfig } from '../../config/index.js';
 import { runTestAgent } from '../../../agent-core/runner.js';
@@ -133,7 +134,8 @@ export async function* sendMessageStreaming(
   // Build query with file context if needed
   let agentQuery = message;
   if (uploadedFiles && uploadedFiles.length > 0) {
-    const fileStoragePath = `${config.storage.root}/chat/${userId}/${conversationId}`;
+    // Use absolute path so agent can find files regardless of its cwd
+    const fileStoragePath = resolve(config.storage.root, 'chat', userId, conversationId);
     agentQuery = `[SYSTEM CONTEXT]
 user_id: ${userId}
 conversation_id: ${conversationId}
@@ -141,7 +143,7 @@ file_storage_path: ${fileStoragePath}
 uploaded_files:
 ${uploadedFiles.map(f => `  - ${fileStoragePath}/${f}`).join('\n')}
 
-IMPORTANT: To read uploaded files, use read tool with the full path above.
+IMPORTANT: To read uploaded files, use the read tool with the FULL absolute paths listed above.
 [/SYSTEM CONTEXT]
 
 ${message}`;
@@ -158,6 +160,7 @@ ${message}`;
     sessionFile: workspace.getSessionFile(conversationId),
     userId,
     conversationId,
+    outputDir: config.agentOutputDir,
     onEvent: (event) => {
       // event is SSEEvent { type, data } from the bridge.
       // Map bridge types → frontend types that ChatView.vue expects.
