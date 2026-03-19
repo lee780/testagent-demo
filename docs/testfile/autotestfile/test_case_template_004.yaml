@@ -1,0 +1,68 @@
+# 接口测试用例参考格式
+# 模型：MODEL_001 授信额度测算
+# 说明：此文件为 Agent 生成测试用例时的参考模板，不含真实测试数据
+
+suite:
+  id: SUITE_MODEL001
+  name: 授信额度模型接口测试
+  model_id: MODEL_001
+  endpoint: /api/model/score
+  method: POST
+  content_type: application/xml
+
+test_cases:
+
+  - id: TC_MODEL001_004
+    name: "工资>10000有社保资产>0准入"
+    category: 正常流程          # 正常流程 / 异常流程 / 边界值 / 数据校验 / 性能
+    priority: P0               # P0 / P1 / P2
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC004"
+          user_level: 3        # 1~5
+        account_balance:
+          user_id: "TC004"
+          avg_3m_balance: 5000    # decimal，可为负
+        cgs_social_security:
+          user_id: "TC004"
+          social_security_flag: 1   # 0=无社保 / 1=有社保
+        salary_summary:
+          user_id: "TC004"
+          monthly_salary: 15000    # decimal，范围 1~10000000
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC004</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id></sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name></person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "1"              # 0=不准入 / 1=准入
+        desc: 准入判断结果
+      - path: "//credit_limit"
+        op: eq
+        value: "517500.00"              # 格式："0.00"，公式：user_level × avg_3m_balance × monthly_salary × 2.3，负数归零
+        desc: 授信额度
+    notes: "用例说明"
