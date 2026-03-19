@@ -14,7 +14,7 @@
 import { buildCustomTools, createToolConfig, type ToolConfig } from "./tools/index.js";
 import { TaskManager, type ProgressCallback, type TaskEvent } from "./orchestrator/task-manager.js";
 import { createOrchestratorTools, type WorkerFn } from "./orchestrator/orchestrator-tools.js";
-import { buildSystemPrompt } from "./system-prompt.js";
+import { buildSystemPrompt, type TestMode } from "./system-prompt.js";
 import { createEventBridge, type PiAgentEvent, type SSEEvent } from "./subscribe.js";
 import type { AgentToolDef } from "./tools/code-index.js";
 
@@ -43,6 +43,8 @@ export interface RunTestAgentParams {
   conversationId?: string;
   /** Output directory for downloadable files. */
   outputDir?: string;
+  /** Test mode: 'standard' (fixed workflow) or 'explore' (creative exploration). */
+  mode?: TestMode;
   /** Custom instructions to append to system prompt. */
   customInstructions?: string;
   /** SSE event callback. */
@@ -106,6 +108,7 @@ export async function runTestAgent(params: RunTestAgentParams): Promise<RunTestA
   // 6. Build system prompt
   const systemPrompt = buildSystemPrompt({
     workspace: params.workspace,
+    mode: params.mode,
     customInstructions: params.customInstructions,
   });
 

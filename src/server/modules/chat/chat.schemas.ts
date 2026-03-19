@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const chatMessageSchema = z.object({
   message: z.string().min(1, '消息不能为空'),
   conversation_id: z.string().nullable().optional(),
+  mode: z.enum(['standard', 'explore']).optional().default('standard'),
 });
 
 export const interruptSchema = z.object({
