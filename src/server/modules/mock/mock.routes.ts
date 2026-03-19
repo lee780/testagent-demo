@@ -25,12 +25,10 @@ function buildXmlResponse(
 export async function registerMockRoutes(app: FastifyInstance): Promise<void> {
   const logger = getLogger();
 
-  // 注册 XML content-type 解析器
-  app.addContentTypeParser(
-    'application/xml',
-    { parseAs: 'string' },
-    (_req, body, done) => done(null, body)
-  );
+  // 注册 XML content-type 解析器（同时支持 application/xml 和 text/xml）
+  const xmlParser = (_req: any, body: string, done: any) => done(null, body);
+  app.addContentTypeParser('application/xml', { parseAs: 'string' }, xmlParser);
+  app.addContentTypeParser('text/xml', { parseAs: 'string' }, xmlParser);
 
   /**
    * POST /mock/model/score
@@ -44,7 +42,7 @@ export async function registerMockRoutes(app: FastifyInstance): Promise<void> {
 
     if (!userId) {
       const resp = buildXmlResponse('9999', 'user_id 不能为空', '0', '0.00');
-      return reply.status(400).header('Content-Type', 'application/xml').send(resp);
+      return reply.status(400).header('Content-Type', 'text/xml; charset=utf-8').send(resp);
     }
 
     const result = await calculateCreditScore(userId);
@@ -58,6 +56,6 @@ export async function registerMockRoutes(app: FastifyInstance): Promise<void> {
       result.creditLimit
     );
 
-    return reply.status(200).header('Content-Type', 'application/xml').send(resp);
+    return reply.status(200).header('Content-Type', 'text/xml; charset=utf-8').send(resp);
   });
 }

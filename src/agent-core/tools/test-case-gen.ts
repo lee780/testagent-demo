@@ -74,33 +74,13 @@ teststeps:
       url: /mock/model/score
       method: POST
       headers:
-        Content-Type: application/xml;charset=utf-8
-      body: |
-        <?xml version="1.0" encoding="utf-8"?>
-        <REQUEST>
-          <user_id>${userId}</user_id>
-          <model_id>MODEL_001</model_id>
-          <channel>131</channel>
-          <business_params>
-            <sx_trace_id>${userId}_TRACE</sx_trace_id>
-            <corp_id></corp_id>
-            <corp_xy_num></corp_xy_num>
-            <person_idtype>1010</person_idtype>
-            <person_id></person_id>
-            <person_name></person_name>
-            <bnk_no></bnk_no>
-            <cp_code>8890</cp_code>
-            <c_code>110110</c_code>
-            <p_code>110000</p_code>
-            <fr_psn_id></fr_psn_id>
-            <fr_psn_name></fr_psn_name>
-          </business_params>
-        </REQUEST>
+        Content-Type: text/xml; charset=utf-8
+      body: "<?xml version='1.0' encoding='utf-8'?><REQUEST><user_id>${userId}</user_id><model_id>MODEL_001</model_id><channel>131</channel><business_params><sx_trace_id>${userId}_TRACE</sx_trace_id><corp_id></corp_id><corp_xy_num></corp_xy_num><person_idtype>1010</person_idtype><person_id></person_id><person_name></person_name><bnk_no></bnk_no><cp_code>8890</cp_code><c_code>110110</c_code><p_code>110000</p_code><fr_psn_id></fr_psn_id><fr_psn_name></fr_psn_name></business_params></REQUEST>"
     validate:
       - eq: ["status_code", 200]
-      - contains: ["body", "<result_code>0000</result_code>"]
-      - contains: ["body", "<admit_flag>${e.admit_flag}</admit_flag>"]
-      - contains: ["body", "<credit_limit>${e.credit_limit}</credit_limit>"]
+      - contains: ["text", "<result_code>0000</result_code>"]
+      - contains: ["text", "<admit_flag>${e.admit_flag}</admit_flag>"]
+      - contains: ["text", "<credit_limit>${e.credit_limit}</credit_limit>"]
 `;
 
   const filename = `${id}_test.yaml`;
