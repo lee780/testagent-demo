@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+sessions/
+agent-outputs/
+.testagent/
+/storage/
+frontend/node_modules/
+frontend/dist/
