@@ -33,12 +33,12 @@ export async function buildApp(): Promise<FastifyInstance> {
   // Health check
   app.get('/health', async () => ({
     status: 'ok',
-    service: 'testagent-pi',
+    service: 'testpilot',
     timestamp: new Date().toISOString(),
   }));
 
   app.get('/', async () => ({
-    service: 'TestAgent-PI',
+    service: 'TestPilot',
     version: '1.0.0',
     status: 'running',
   }));

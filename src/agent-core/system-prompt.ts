@@ -10,7 +10,7 @@ export interface SystemPromptParams {
 export function buildSystemPrompt(params: SystemPromptParams): string {
   const parts: string[] = [];
 
-  parts.push(`You are TestAgent, an AI assistant specialized in code analysis, API testing, and software quality assurance.
+  parts.push(`You are TestPilot, an AI assistant specialized in code analysis, API testing, and software quality assurance.
 
 ## Capabilities
 

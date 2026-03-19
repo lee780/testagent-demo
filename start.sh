@@ -1,5 +1,5 @@
 #!/bin/bash
-# TestAgent-PI 本地启动脚本
+# TestPilot 测试领航 — 本地启动脚本
 # 依赖: Node.js 25 (via /usr/local/Cellar/node/25.8.1_1), PostgreSQL@16, Redis
 
 set -e
@@ -51,7 +51,7 @@ grep -q "ready" /tmp/testagent-frontend.log && echo "  Frontend: OK" || echo "  
 # ── Done ─────────────────────────────────────────────────────────────────
 echo ""
 echo "=========================================="
-echo "  TestAgent-PI is running!"
+echo "  TestPilot 测试领航 已启动！"
 echo "  Frontend: http://127.0.0.1:3000"
 echo "  Backend:  http://localhost:8000"
 echo "  Logs:     /tmp/testagent-server.log"

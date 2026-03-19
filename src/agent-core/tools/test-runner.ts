@@ -381,7 +381,7 @@ function buildHtmlReport(results: CaseResult[], baseUrl: string, durationMs: num
   </div>
 
 </div>
-<div class="footer">TestAgent-PI 自动化测试报告 · 参考 HttpRunner 报告体系</div>
+<div class="footer">TestPilot 测试领航 · 自动化测试报告 · 参考 HttpRunner 报告体系</div>
 <script>
 function toggleDetail(id){
   var el=document.getElementById('detail-'+id);

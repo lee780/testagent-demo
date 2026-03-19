@@ -5,7 +5,56 @@
       <div class="chat-container" :class="{ 'has-messages': hasMessages }">
         <!-- 无对话时的居中布局 -->
         <div v-if="!hasMessages" class="empty-state">
-          <h1 class="welcome-title">我现在能怎么帮您？</h1>
+          <div class="platform-intro">
+            <div class="platform-brand">
+              <span class="platform-icon">✈</span>
+              <div>
+                <h1 class="platform-name">TestPilot <span class="platform-name-cn">测试领航</span></h1>
+                <p class="platform-tagline">从文档到报告，全程无人驾驶</p>
+              </div>
+            </div>
+            <p class="platform-desc">
+              上传业务规则文档，AI 自动生成接口测试用例、执行测试、输出 HTML 测试报告，支持多系统对比缺陷识别，全程无需人工干预。
+            </p>
+            <div class="level-grid">
+              <div class="level-card">
+                <div class="level-badge">L1</div>
+                <div class="level-body">
+                  <div class="level-title">辅助测试</div>
+                  <div class="level-desc">手动设计用例，Postman / JMeter 辅助执行</div>
+                </div>
+              </div>
+              <div class="level-card">
+                <div class="level-badge">L2</div>
+                <div class="level-body">
+                  <div class="level-title">半自动测试</div>
+                  <div class="level-desc">工具生成框架，人工补全后执行，Robot Framework</div>
+                </div>
+              </div>
+              <div class="level-card">
+                <div class="level-badge">L3</div>
+                <div class="level-body">
+                  <div class="level-title">条件自动化</div>
+                  <div class="level-desc">AI 生成用例，人工 Review 后一键执行</div>
+                </div>
+              </div>
+              <div class="level-card level-current">
+                <div class="level-badge current">L4 · 当前</div>
+                <div class="level-body">
+                  <div class="level-title">高度自动化</div>
+                  <div class="level-desc">文档 → 用例 → 执行 → 报告，双系统对比缺陷识别，全自动</div>
+                </div>
+              </div>
+              <div class="level-card level-future">
+                <div class="level-badge future">L5 · 规划中</div>
+                <div class="level-body">
+                  <div class="level-title">完全自动化</div>
+                  <div class="level-desc">持续回归 + 缺陷自动定位 + CI/CD 集成 + 智能分析</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <h2 class="welcome-title">我现在能怎么帮您？</h2>
           
           <div class="prompt-input-container">
             <!-- 文件预览区 -->
@@ -737,8 +786,120 @@ onMounted(() => {
   padding: 0 24px;
 }
 
+.platform-intro {
+  width: 100%;
+  max-width: 760px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.platform-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.platform-icon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.platform-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+}
+
+.platform-name-cn {
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-left: 8px;
+}
+
+.platform-tagline {
+  font-size: 13px;
+  color: #5b9bd5;
+  margin: 0;
+  font-weight: 500;
+}
+
+.platform-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.level-card {
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.2s;
+}
+
+.level-card.level-current {
+  border-color: #5b9bd5;
+  background: rgba(91, 155, 213, 0.08);
+}
+
+.level-card.level-future {
+  opacity: 0.6;
+}
+
+.level-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--border-color);
+  border-radius: 6px;
+  padding: 2px 8px;
+  width: fit-content;
+}
+
+.level-badge.current {
+  color: #fff;
+  background: #5b9bd5;
+}
+
+.level-badge.future {
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px dashed var(--border-color);
+}
+
+.level-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.level-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
 .welcome-title {
-  font-size: 32px;
+  font-size: 22px;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
