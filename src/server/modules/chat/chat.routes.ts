@@ -62,6 +62,7 @@ export async function registerChatRoutes(app: FastifyInstance): Promise<void> {
         userId,
         conversationId,
         uploadedFiles,
+        mode: body.mode,
       });
 
       await streamSSE(reply, generator);
@@ -209,12 +210,32 @@ export async function registerChatRoutes(app: FastifyInstance): Promise<void> {
       }
 
       const safeFilename = path.basename(filePath);
-      reply.header('Content-Disposition', `attachment; filename="${safeFilename}"`);
+      const asciiFallback = safeFilename.replace(/[^\x00-\x7F]/g, '_');
+      const encodedFilename = encodeURIComponent(safeFilename);
+      reply.header('Content-Disposition', `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodedFilename}`);
       reply.header('Content-Type', 'application/octet-stream');
       reply.header('Content-Length', stat.size);
 
       const stream = fs.createReadStream(filePath);
       return reply.send(stream);
+    }
+  );
+
+  // GET /api/chat/presets — return default message text and reference YAML files for new conversations
+  app.get(
+    '/api/chat/presets',
+    { preHandler: [authenticate] },
+    async (_request: FastifyRequest, _reply: FastifyReply) => {
+      const presetsDir = path.resolve(process.cwd(), 'docs/testfile');
+      const readSafe = (p: string): string | null => {
+        try { return fs.readFileSync(p, 'utf-8'); } catch { return null; }
+      };
+      const message = readSafe(path.join(presetsDir, '测试提问')) ?? '';
+      const fileNames = ['test_case_template.yaml', 'MODEL001_用例样例.yaml'];
+      const files = fileNames
+        .map(name => ({ name, content: readSafe(path.join(presetsDir, name)) }))
+        .filter((f): f is { name: string; content: string } => f.content !== null);
+      return { success: true, data: { message: message.trim(), files } };
     }
   );
 

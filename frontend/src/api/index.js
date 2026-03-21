@@ -261,7 +261,39 @@ export default {
   // 获取对话的 Coordinator 计划
   getConversationPlan(conversationId) {
     return api.get(`/conversations/${conversationId}/plan`)
-  }
+  },
+
+  // ==================== 用例库 ====================
+  listTestCases(params) {
+    return api.get('/testcases', { params })
+  },
+  getTestCaseStats(params) {
+    return api.get('/testcases/stats', { params })
+  },
+  createTestCase(data) {
+    return api.post('/testcases', data)
+  },
+  getTestCase(id) {
+    return api.get(`/testcases/${id}`)
+  },
+  updateTestCase(id, data) {
+    return api.put(`/testcases/${id}`, data)
+  },
+  submitTestCaseForReview(id) {
+    return api.post(`/testcases/${id}/submit`)
+  },
+  reviewTestCase(id, data) {
+    return api.post(`/testcases/${id}/review`, data)
+  },
+  baselineTestCase(id) {
+    return api.post(`/testcases/${id}/baseline`)
+  },
+  getTestCaseHistory(id) {
+    return api.get(`/testcases/${id}/history`)
+  },
+  getTestCaseExecutions(id, params) {
+    return api.get(`/testcases/${id}/executions`, { params })
+  },
 }
 
 // 导出辅助函数

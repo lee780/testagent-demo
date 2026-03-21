@@ -1,8 +1,12 @@
 import { z } from 'zod';
 
+export const TEST_MODES = ['regression', 'systematic', 'exploratory', 'chaos'] as const;
+export type TestMode = typeof TEST_MODES[number];
+
 export const chatMessageSchema = z.object({
   message: z.string().min(1, '消息不能为空'),
   conversation_id: z.string().nullable().optional(),
+  mode: z.enum(TEST_MODES).optional(),
 });
 
 export const interruptSchema = z.object({

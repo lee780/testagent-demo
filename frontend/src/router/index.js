@@ -52,7 +52,43 @@ const router = createRouter({
       name: 'settings',
       component: () => import('../views/SettingsView.vue'),
       meta: { requiresAuth: true }
-    }
+    },
+    {
+      path: '/testcases',
+      name: 'testcases',
+      component: () => import('../views/TestCasesView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/testcases/:id',
+      name: 'testcase-detail',
+      component: () => import('../views/TestCaseDetailView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/reports',
+      name: 'reports',
+      component: () => import('../views/ReportsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/reports/:id',
+      name: 'report-detail',
+      component: () => import('../views/ReportDetailView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/defects',
+      name: 'defects',
+      component: () => import('../views/DefectsView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/defects/:id',
+      name: 'defect-detail',
+      component: () => import('../views/DefectDetailView.vue'),
+      meta: { requiresAuth: true }
+    },
   ]
 })
 

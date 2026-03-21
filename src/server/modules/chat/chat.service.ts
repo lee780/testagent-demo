@@ -84,12 +84,13 @@ export interface SSEStreamOptions {
   userId: string;
   conversationId?: string | null;
   uploadedFiles?: string[];
+  mode?: 'regression' | 'systematic' | 'exploratory' | 'chaos';
 }
 
 export async function* sendMessageStreaming(
   options: SSEStreamOptions
 ): AsyncGenerator<Record<string, unknown>> {
-  const { message, userId, uploadedFiles } = options;
+  const { message, userId, uploadedFiles, mode } = options;
   let { conversationId } = options;
   const logger = getLogger();
   const config = getConfig();
@@ -152,7 +153,7 @@ ${message}`;
   // 7. Start agent (non-blocking — pushes events to queue)
   const agentPromise = runTestAgent({
     query: agentQuery,
-    workspace: workspace.getScratchDir(),
+    workspace: workspace.getScratchDir(conversationId),
     provider: config.llm.provider,
     modelId: config.llm.modelName,
     apiKey: config.llm.apiKey,
@@ -161,6 +162,7 @@ ${message}`;
     userId,
     conversationId,
     outputDir: config.agentOutputDir,
+    mode,
     onEvent: (event) => {
       // event is SSEEvent { type, data } from the bridge.
       // Map bridge types → frontend types that ChatView.vue expects.
@@ -176,6 +178,8 @@ ${message}`;
         queue.push({ type: 'tool_result', id: d.tool_call_id, name: d.tool_name, output: d.result, success: !d.is_error });
       } else if (t === 'coordinator_event') {
         queue.push(d as Record<string, unknown>);
+      } else if (t === 'test_progress') {
+        queue.push({ type: 'test_progress', ...d });
       }
     },
     signal: abortController.signal,

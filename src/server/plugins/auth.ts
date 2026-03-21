@@ -57,16 +57,18 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
   const sessionKey = `session:${userId}`;
   try {
     const sessionData = await redis.get(sessionKey);
-    if (sessionData) {
-      const session = JSON.parse(sessionData);
-      if (session.token_jti !== jti) {
-        logger.warn({ userId }, 'Session invalidated (kicked out)');
-        throw new UnauthorizedError('会话已失效，请重新登录');
-      }
+    if (sessionData === null) {
+      // Session deleted (logged out or expired) — reject
+      throw new UnauthorizedError('会话已失效，请重新登录');
+    }
+    const session = JSON.parse(sessionData);
+    if (session.token_jti !== jti) {
+      logger.warn({ userId }, 'Session invalidated (kicked out)');
+      throw new UnauthorizedError('会话已失效，请重新登录');
     }
   } catch (err) {
     if (err instanceof UnauthorizedError) throw err;
-    // Redis error - allow access gracefully
+    // Redis connection error — allow access gracefully
     logger.error({ err }, 'Redis session check failed');
   }
 

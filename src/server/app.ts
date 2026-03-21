@@ -9,6 +9,9 @@ import { registerAuthRoutes } from './modules/auth/auth.routes.js';
 import { registerConversationRoutes } from './modules/conversation/conversation.routes.js';
 import { registerChatRoutes } from './modules/chat/chat.routes.js';
 import { registerMockRoutes } from './modules/mock/mock.routes.js';
+import { registerTestCaseRoutes } from './modules/testcase/testcase.routes.js';
+import { registerReportRoutes } from './modules/report/report.routes.js';
+import { registerDefectRoutes } from './modules/defect/defect.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const logger = getLogger();
@@ -48,6 +51,9 @@ export async function buildApp(): Promise<FastifyInstance> {
   await registerConversationRoutes(app);
   await registerChatRoutes(app);
   await registerMockRoutes(app);
+  await registerTestCaseRoutes(app);
+  await registerReportRoutes(app);
+  await registerDefectRoutes(app);
 
   logger.info('Fastify app built successfully');
 

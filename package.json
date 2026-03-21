@@ -6,7 +6,7 @@
   "main": "dist/server/index.js",
   "scripts": {
     "build": "tsc",
-    "dev": "tsx src/server/index.ts",
+    "dev": "tsx watch src/server/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
@@ -18,8 +18,8 @@
     "@fastify/cors": "^10.0.0",
     "@fastify/multipart": "^9.0.0",
     "@fastify/rate-limit": "^10.0.0",
-    "@mariozechner/pi-ai": "^0.55.3",
     "@mariozechner/pi-agent-core": "^0.55.3",
+    "@mariozechner/pi-ai": "^0.55.3",
     "@mariozechner/pi-coding-agent": "^0.55.3",
     "@prisma/client": "^6.0.0",
     "@sinclair/typebox": "^0.34.48",
@@ -34,6 +34,7 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.0",
     "@types/node": "^22.15.0",

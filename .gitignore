@@ -8,3 +8,13 @@ agent-outputs/
 /storage/
 frontend/node_modules/
 frontend/dist/
+
+# Runtime artifacts
+downloads/
+test-results/
+generated_test_cases/
+generated_test_cases.zip
+test_cases_model001/
+test_results.json
+docs/.DS_Store
+.DS_Store

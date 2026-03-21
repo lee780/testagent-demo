@@ -86,13 +86,26 @@
             </div>
 
             <div class="prompt-input-action-bar">
-              <button 
-                class="action-btn upload-btn" 
+              <button
+                class="action-btn upload-btn"
                 @click="triggerFileInput"
                 title="上传文件"
               >
                 <el-icon><Paperclip /></el-icon>
               </button>
+              <div class="mode-switcher">
+                <button
+                  v-for="m in testModes"
+                  :key="m.value"
+                  class="mode-btn"
+                  :class="{ active: currentMode === m.value }"
+                  :style="currentMode === m.value ? { borderColor: m.color, color: m.color, background: m.bg } : {}"
+                  :title="m.desc"
+                  @click="currentMode = m.value"
+                >
+                  {{ m.icon }} {{ m.label }}
+                </button>
+              </div>
               <div class="spacer"></div>
               <button
                 class="action-btn send-btn"
@@ -119,7 +132,15 @@
                   {{ msg.role === 'user' ? 'U' : 'A' }}
                 </div>
                 <div class="message-text">
-                  <template v-if="msg.role === 'user'">{{ msg.content }}</template>
+                  <template v-if="msg.role === 'user'">
+                    {{ msg.content }}
+                    <button
+                      v-if="!loading && index === messages.length - 1"
+                      class="rerun-btn"
+                      @click="rerunMessage(msg.content)"
+                      title="重新执行"
+                    >↺ 重新执行</button>
+                  </template>
                   <template v-else-if="msg.role === 'assistant'">
                     <!-- 思考过程展示（灰色小号字体） -->
                     <div v-if="msg.thinking" class="thinking-block">
@@ -151,6 +172,47 @@
                         :content="msg.content"
                       />
                     </template>
+
+                    <!-- 执行完成报告卡片 -->
+                    <div v-if="msg.reportCard" class="report-ready-card">
+                      <div class="rrc-icon">📋</div>
+                      <div class="rrc-body">
+                        <div class="rrc-title">测试执行完成</div>
+                        <div class="rrc-desc">已生成 {{ msg.reportCard.files.length }} 个 HTML 文件，点击保存到报告库后可管理用例入库</div>
+                      </div>
+                      <router-link to="/reports" class="rrc-btn">报告库 →</router-link>
+                    </div>
+
+                    <!-- 实时测试进度块 -->
+                    <div v-if="msg.testProgress && msg.testProgress.total > 0" class="test-progress-block">
+                      <div class="tp-header">
+                        <span class="tp-title">🧪 测试执行进度</span>
+                        <span class="tp-stats">
+                          {{ msg.testProgress.current }}/{{ msg.testProgress.total }}
+                          &nbsp;·&nbsp;
+                          <span class="tp-pass">✅ {{ msg.testProgress.passed }}</span>
+                          &nbsp;
+                          <span class="tp-fail">❌ {{ msg.testProgress.failed }}</span>
+                          &nbsp;·&nbsp;
+                          通过率 {{ msg.testProgress.total > 0 ? ((msg.testProgress.passed / msg.testProgress.total) * 100).toFixed(1) : 0 }}%
+                        </span>
+                      </div>
+                      <div class="tp-bar-wrap">
+                        <div class="tp-bar-bg">
+                          <div class="tp-bar-pass" :style="{ width: (msg.testProgress.passed / msg.testProgress.total * 100) + '%' }"></div>
+                          <div class="tp-bar-fail" :style="{ width: (msg.testProgress.failed / msg.testProgress.total * 100) + '%', left: (msg.testProgress.passed / msg.testProgress.total * 100) + '%' }"></div>
+                        </div>
+                      </div>
+                      <div class="tp-dots">
+                        <span
+                          v-for="(c, i) in msg.testProgress.cases"
+                          :key="i"
+                          class="tp-dot"
+                          :class="c.status === 'PASSED' ? 'tp-dot-pass' : c.status === 'FAILED' ? 'tp-dot-fail' : 'tp-dot-error'"
+                          :title="c.id + ': ' + c.status"
+                        ></span>
+                      </div>
+                    </div>
 
                     <!-- 测试用例展示 -->
                     <div v-if="msg.testcases && msg.testcases.length > 0" class="testcases-block">
@@ -210,9 +272,9 @@
 
           <!-- 计划步骤展示组件 -->
           <PlanStepBar :planData="currentPlanData" />
-          
-          <!-- 生成文件下载面板 (固定在右侧) -->
-          <FileDownloadPanel ref="downloadPanel" :conversation-id="currentConversationId" />
+
+          <!-- 生成文件下载面板（嵌入式折叠） -->
+          <FileDownloadPanel ref="downloadPanel" :conversation-id="currentConversationId" :execution-mode="currentMode" />
 
           <div class="bottom-input-wrapper">
             <div class="bottom-input-container">
@@ -245,13 +307,26 @@
               </div>
 
               <div class="prompt-input-action-bar">
-                <button 
-                  class="action-btn upload-btn" 
+                <button
+                  class="action-btn upload-btn"
                   @click="triggerFileInput"
                   title="上传文件"
                 >
                   <el-icon><Paperclip /></el-icon>
                 </button>
+                <div class="mode-switcher">
+                  <button
+                    v-for="m in testModes"
+                    :key="m.value"
+                    class="mode-btn"
+                    :class="{ active: currentMode === m.value }"
+                    :style="currentMode === m.value ? { borderColor: m.color, color: m.color, background: m.bg } : {}"
+                    :title="m.desc"
+                    @click="currentMode = m.value"
+                  >
+                    {{ m.icon }} {{ m.label }}
+                  </button>
+                </div>
                 <div class="spacer"></div>
                 <!-- 发送/终止按钮 -->
                 <button
@@ -263,10 +338,10 @@
                 >
                   <el-icon><Top /></el-icon>
                 </button>
-                <button 
+                <button
                   v-else
-                  class="action-btn stop-btn" 
-                  @click="stopAgent" 
+                  class="action-btn stop-btn"
+                  @click="stopAgent"
                   title="终止生成"
                 >
                   <el-icon><Close /></el-icon>
@@ -294,6 +369,7 @@ import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import api from '@/api'
 import { useChatStore } from '@/stores/chat'
+
 import MarkdownViewer from '@/components/MarkdownViewer.vue'
 import PlanStepBar from '@/components/PlanStepBar.vue'
 import ToolCallCard from '@/components/ToolCallCard.vue'
@@ -301,18 +377,58 @@ import FileDownloadPanel from '@/components/FileDownloadPanel.vue'
 import { SSEParser } from '@/utils/sse-parser.js'
 
 const chatStore = useChatStore()
-const { 
-  conversations, 
-  currentConversationId, 
-  messages, 
-  loading 
+const {
+  conversations,
+  currentConversationId,
+  messages,
+  loading
 } = storeToRefs(chatStore)
-const { loadConversations, startNewChat } = chatStore
+const { loadConversations, startNewChat, setConversationMode, getConversationMode } = chatStore
 
 const inputMessage = ref('')
 
 // 当前正在执行的 reply_id，用于终止
 const currentReplyId = ref(null)
+
+// 测试模式 — 绑定到当前对话，切换对话时保留各自的模式
+const currentMode = computed({
+  get: () => getConversationMode(currentConversationId.value),
+  set: (val) => setConversationMode(currentConversationId.value, val)
+})
+const testModes = [
+  {
+    value: 'regression',
+    icon: '🔒',
+    label: '回归',
+    desc: '回归模式：运行基线用例，结果可复现，CI/CD友好',
+    color: '#5b9bd5',
+    bg: 'rgba(91,155,213,0.10)',
+  },
+  {
+    value: 'systematic',
+    icon: '📐',
+    label: '系统化',
+    desc: '系统化模式：BVA等价类算法驱动，首次建设用例库',
+    color: '#67c23a',
+    bg: 'rgba(103,194,58,0.10)',
+  },
+  {
+    value: 'exploratory',
+    icon: '🔭',
+    label: '探索',
+    desc: '探索模式：LLM自由探索，挖掘非常规缺陷',
+    color: '#e6a23c',
+    bg: 'rgba(230,162,60,0.10)',
+  },
+  {
+    value: 'chaos',
+    icon: '🌪️',
+    label: '混沌对比',
+    desc: '混沌/对比模式：双系统同时运行，自动识别差异与回归',
+    color: '#f56c6c',
+    bg: 'rgba(245,108,108,0.10)',
+  },
+]
 
 const selectedFiles = ref([])
 const fileInput = ref(null)
@@ -330,8 +446,39 @@ const hasMessages = computed(() => messages.value.length > 0)
 // 标志位，防止发送消息时触发的 ID 变化导致重复加载
 const isSending = ref(false)
 
+// 加载预设（新对话时自动填充消息和参考文件）
+const loadPresets = async () => {
+  try {
+    const resp = await fetch('/api/chat/presets', {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+    })
+    if (!resp.ok) return
+    const data = await resp.json()
+    if (!data.success) return
+
+    if (data.data.message) {
+      inputMessage.value = data.data.message
+      await nextTick()
+      adjustTextareaHeight()
+    }
+
+    if (data.data.files?.length) {
+      const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 15)
+      selectedFiles.value = data.data.files.map(f => {
+        const dot = f.name.lastIndexOf('.')
+        const base = dot >= 0 ? f.name.slice(0, dot) : f.name
+        const ext  = dot >= 0 ? f.name.slice(dot) : ''
+        return new File([f.content], `${base}_${timestamp}${ext}`, { type: 'text/plain' })
+      })
+    }
+  } catch (e) {
+    console.warn('加载预设失败:', e)
+  }
+}
+
 // 监听当前对话变化，加载消息和计划
 watch(currentConversationId, async (newId) => {
+  if (!isSending.value) loading.value = false // 切换对话时清除非当前对话的 loading 状态
   if (isSending.value) return // 如果正在发送中，不触发自动加载，避免覆盖本地正在生成的流
 
   if (newId) {
@@ -357,6 +504,22 @@ watch(currentConversationId, async (newId) => {
     }
   } else {
     messages.value = []
+    if (!isSending.value) {
+      // Check for pending regression from recommend panel
+      const pending = sessionStorage.getItem('pendingRegression')
+      if (pending) {
+        sessionStorage.removeItem('pendingRegression')
+        try {
+          const { message, mode } = JSON.parse(pending)
+          if (mode) setConversationMode(null, mode)
+          inputMessage.value = message
+          await nextTick()
+          await sendMessage()
+        } catch {}
+      } else {
+        loadPresets()
+      }
+    }
   }
 }, { immediate: true })
 
@@ -448,8 +611,23 @@ const sendMessage = async () => {
 
     await nextTick()
     scrollToBottom(true)
+    // After first message, the bottom textarea replaces the top one — restore focus so Enter key keeps working
+    bottomInputTextarea.value?.focus()
 
     loading.value = true
+
+    const hangTimeout = setTimeout(() => {
+      if (loading.value) {
+        loading.value = false
+        isSending.value = false
+        currentReplyId.value = null
+        const msg = messages.value[messages.value.length - 1]
+        if (msg?.role === 'assistant' && !msg.content) {
+          msg.content = 'Agent 响应超时（5分钟），请重试。'
+          msg.events = []
+        }
+      }
+    }, 5 * 60 * 1000)
 
     // 添加空的助手消息占位（使用 events 数组模型）
     const assistantMsgIndex = messages.value.length
@@ -469,7 +647,8 @@ const sendMessage = async () => {
       },
       body: JSON.stringify({
         message: finalMessage,
-        conversation_id: currentConversationId.value || undefined
+        conversation_id: currentConversationId.value || undefined,
+        mode: currentMode.value,
       })
     })
 
@@ -533,6 +712,15 @@ const sendMessage = async () => {
               success: parsed.success,
             })
           }
+        } else if (parsed.type === 'test_progress') {
+          if (!msg.testProgress) {
+            msg.testProgress = { current: 0, total: parsed.total, passed: 0, failed: 0, cases: [] }
+          }
+          msg.testProgress.current = parsed.current
+          msg.testProgress.total = parsed.total
+          msg.testProgress.passed = parsed.passed
+          msg.testProgress.failed = parsed.failed
+          msg.testProgress.cases.push({ id: parsed.case_id, status: parsed.status })
         } else if (parsed.type === 'title_generated') {
           chatStore.updateConversationTitle(parsed.conversation_id, parsed.title)
         } else if (parsed.type === 'error') {
@@ -571,11 +759,28 @@ const sendMessage = async () => {
       }
     }
   } finally {
+    clearTimeout(hangTimeout)
     loading.value = false
     isSending.value = false
     currentReplyId.value = null
     // Refresh download panel after every agent response
     downloadPanel.value?.refresh()
+    // Show "report ready" card in chat if HTML files were generated
+    try {
+      const convId = currentConversationId.value
+      if (convId) {
+        const token = localStorage.getItem('access_token')
+        const res = await fetch(`/api/conversations/${convId}/outputs`, { headers: { Authorization: `Bearer ${token}` } })
+        const data = await res.json()
+        const htmlFiles = (data.data || []).filter(f => f.name.toLowerCase().endsWith('.html'))
+        if (htmlFiles.length > 0) {
+          const lastMsg = messages.value[messages.value.length - 1]
+          if (lastMsg?.role === 'assistant') {
+            lastMsg.reportCard = { convId, files: htmlFiles }
+          }
+        }
+      }
+    } catch {}
   }
 }
 
@@ -614,6 +819,13 @@ const stopAgent = async () => {
     loading.value = false
     currentReplyId.value = null
   }
+}
+
+// 重新执行最后一条用户消息
+const rerunMessage = (content) => {
+  if (loading.value) return
+  inputMessage.value = content
+  sendMessage()
 }
 
 // 文本框高度调整
@@ -669,7 +881,7 @@ const cancelFile = (idx) => {
 
 // 键盘事件处理
 const handleKeydown = (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
     e.preventDefault()
     sendMessage()
   }
@@ -1010,6 +1222,25 @@ onMounted(() => {
   white-space: pre-wrap;
 }
 
+.rerun-btn {
+  display: block;
+  margin-top: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+  background: transparent;
+  border: 1px solid var(--border-color, #444);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.15s, color 0.15s;
+}
+.rerun-btn:hover {
+  opacity: 1;
+  color: var(--accent-color, #67c23a);
+  border-color: var(--accent-color, #67c23a);
+}
+
 /* 思考过程样式 - 灰色小号字体，黑白主题下均为灰色 */
 .thinking-block {
   margin-bottom: 12px;
@@ -1080,6 +1311,11 @@ onMounted(() => {
   border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: center;
+}
+
+/* 下载面板无文件时不占空间 */
+.download-panel-placeholder {
+  display: none;
 }
 
 .bottom-input-container {
@@ -1244,6 +1480,40 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
+/* 模式切换器 */
+.mode-switcher {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.mode-btn:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+
+.mode-btn.active {
+  font-weight: 600;
+}
+
 /* 终止按钮样式 */
 .stop-btn {
   background: #f56c6c !important;
@@ -1260,10 +1530,117 @@ onMounted(() => {
   transform: scale(0.95);
 }
 
+/* ==================== 实时测试进度块 ==================== */
+.test-progress-block {
+  margin: 12px 0;
+  padding: 12px 14px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tp-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tp-stats {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.tp-pass { color: #2e7d32; font-weight: 600; }
+.tp-fail { color: #c62828; font-weight: 600; }
+
+.tp-bar-wrap { height: 6px; }
+
+.tp-bar-bg {
+  position: relative;
+  height: 6px;
+  background: var(--border-color);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.tp-bar-pass {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  background: #2e7d32;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.tp-bar-fail {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: #c62828;
+  transition: width 0.3s, left 0.3s;
+}
+
+.tp-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.tp-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.tp-dot-pass  { background: #2e7d32; }
+.tp-dot-fail  { background: #c62828; }
+.tp-dot-error { background: #e65100; }
+
 /* ==================== Coordinator 侧边栏布局适配 ==================== */
-/* 
+/*
  * 注意：侧边栏使用 fixed 定位浮动在右侧，不挤压主内容区
  * 主内容区(chat-messages)保持原有宽度和位置不变
  * 用户可以通过收起侧边栏来查看右侧内容
  */
+
+/* ── 报告完成卡片 ── */
+.report-ready-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(91,155,213,0.12), rgba(103,194,58,0.08));
+  border: 1px solid rgba(91,155,213,0.3);
+  border-radius: 10px;
+  cursor: default;
+}
+.rrc-icon { font-size: 20px; flex-shrink: 0; }
+.rrc-body { flex: 1; }
+.rrc-title { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+.rrc-desc { font-size: 12px; color: var(--text-secondary); }
+.rrc-btn {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  background: #5b9bd5;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 13px;
+  text-decoration: none;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+.rrc-btn:hover { background: #4a8bc4; }
 </style>

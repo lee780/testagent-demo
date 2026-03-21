@@ -4,6 +4,28 @@
 
 import { resolve, relative } from "node:path";
 
+export interface TestProgressEvent {
+  caseId: string;
+  caseName: string;
+  status: string;
+  current: number;
+  total: number;
+  passed: number;
+  failed: number;
+}
+
+export interface SaveTestCaseEvent {
+  modelId: string;
+  caseCode: string;
+  title: string;
+  coveragePoint?: string;
+  priority?: string;
+  inputParams?: Record<string, unknown>;
+  expectedResult?: Record<string, unknown>;
+  conversationId?: string;
+  sourceMode?: string;
+}
+
 export interface ToolConfig {
   /** Root workspace directory (all file access is bounded here). */
   workspace: string;
@@ -15,6 +37,10 @@ export interface ToolConfig {
   userId: string;
   /** Current conversation ID. */
   conversationId: string;
+  /** Called after each test case completes — for real-time SSE progress. */
+  onProgress?: (event: TestProgressEvent) => void;
+  /** Called for each test case to save to the test case library (fire-and-forget). */
+  onSaveTestCase?: (tc: SaveTestCaseEvent) => void;
 }
 
 const DEFAULT_CODE_INDEX_URL = "http://code-index-service:8080";
@@ -27,6 +53,8 @@ export function createToolConfig(overrides: Partial<ToolConfig> = {}): ToolConfi
     outputDir: overrides.outputDir ?? process.env.AGENT_OUTPUT_DIR ?? DEFAULT_OUTPUT_DIR,
     userId: overrides.userId ?? "",
     conversationId: overrides.conversationId ?? "",
+    onProgress: overrides.onProgress,
+    onSaveTestCase: overrides.onSaveTestCase,
   };
 }
 

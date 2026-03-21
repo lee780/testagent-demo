@@ -48,16 +48,16 @@ export function mapPiEventToSSE(event: PiAgentEvent): SSEEvent | null {
       const ame = event.assistantMessageEvent;
       if (!ame) return null;
 
-      if (ame.type === "text_delta" && (ame as any).delta) {
+      if (ame.type === "text_delta" && (ame.text ?? (ame as any).delta)) {
         return {
           type: "agent_message",
-          data: { content: (ame as any).delta, delta: true },
+          data: { content: ame.text ?? (ame as any).delta, delta: true },
         };
       }
-      if (ame.type === "thinking_delta" && (ame as any).delta) {
+      if (ame.type === "thinking_delta" && (ame.thinking ?? (ame as any).delta)) {
         return {
           type: "agent_thinking",
-          data: { content: (ame as any).delta, delta: true },
+          data: { content: ame.thinking ?? (ame as any).delta, delta: true },
         };
       }
       return null;
@@ -122,11 +122,11 @@ export function mapPiEventToFrontendSSE(event: PiAgentEvent): FrontendSSEEvent |
     case "message_update": {
       const ame = event.assistantMessageEvent;
       if (!ame) return null;
-      if (ame.type === "text_delta" && (ame as any).delta) {
-        return { type: "chunk", content: (ame as any).delta };
+      if (ame.type === "text_delta" && (ame.text ?? (ame as any).delta)) {
+        return { type: "chunk", content: ame.text ?? (ame as any).delta };
       }
-      if (ame.type === "thinking_delta" && (ame as any).delta) {
-        return { type: "thinking", content: (ame as any).delta };
+      if (ame.type === "thinking_delta" && (ame.thinking ?? (ame as any).delta)) {
+        return { type: "thinking", content: ame.thinking ?? (ame as any).delta };
       }
       return null;
     }

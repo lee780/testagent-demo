@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { getLogger } from '../../config/logger.js';
 import { calculateCreditScore } from './mock.service.js';
+import { getPrisma } from '../../config/database.js';
 
 function extractXmlTag(xml: string, tag: string): string {
   const match = xml.match(new RegExp(`<${tag}>([^<]*)<\\/${tag}>`));
@@ -57,5 +58,55 @@ export async function registerMockRoutes(app: FastifyInstance): Promise<void> {
     );
 
     return reply.status(200).header('Content-Type', 'text/xml; charset=utf-8').send(resp);
+  });
+
+  /**
+   * POST /mock/setup
+   * 设置测试前置条件 - 为指定用户创建/更新 mock 数据
+   */
+  app.post('/mock/setup', async (request: FastifyRequest, reply: FastifyReply) => {
+    const logger = getLogger();
+    const body = request.body as any;
+    
+    const { userId, userLevel, avg3mBalance, socialSecurityFlag, monthlySalary } = body;
+
+    if (!userId) {
+      return reply.status(400).send({ success: false, error: 'userId is required' });
+    }
+
+    try {
+      const db = getPrisma();
+
+      // 使用 upsert 确保四条记录同时存在或都不存在
+      await db.$transaction([
+        db.mockUserInfo.upsert({
+          where: { userId },
+          update: { userLevel: Number(userLevel) },
+          create: { userId, userLevel: Number(userLevel) },
+        }),
+        db.mockAccountBalance.upsert({
+          where: { userId },
+          update: { avg3mBalance: String(avg3mBalance) },
+          create: { userId, avg3mBalance: String(avg3mBalance) },
+        }),
+        db.mockSocialSecurity.upsert({
+          where: { userId },
+          update: { socialSecurityFlag: Number(socialSecurityFlag) },
+          create: { userId, socialSecurityFlag: Number(socialSecurityFlag) },
+        }),
+        db.mockSalarySummary.upsert({
+          where: { userId },
+          update: { monthlySalary: String(monthlySalary) },
+          create: { userId, monthlySalary: String(monthlySalary) },
+        }),
+      ]);
+
+      logger.info({ userId, userLevel, avg3mBalance, socialSecurityFlag, monthlySalary }, '[Mock] 数据设置完成');
+
+      return reply.send({ success: true, userId, message: 'Test data configured successfully' });
+    } catch (error: any) {
+      logger.error({ error: error.message }, '[Mock] 数据设置失败');
+      return reply.status(500).send({ success: false, error: error.message });
+    }
   });
 }

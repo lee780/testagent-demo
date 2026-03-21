@@ -49,8 +49,10 @@ export class AgentWorkspace {
     return join(this.rootDir, "uploads", userId, conversationId);
   }
 
-  /** Get scratch directory (agent temporary working area) */
-  getScratchDir(): string {
-    return join(this.rootDir, "scratch");
+  /** Get scratch directory (agent temporary working area), isolated per conversation */
+  getScratchDir(conversationId?: string): string {
+    return conversationId
+      ? join(this.rootDir, "scratch", conversationId)
+      : join(this.rootDir, "scratch");
   }
 }

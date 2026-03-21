@@ -54,9 +54,14 @@ model User {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   lastLoginAt   DateTime? @map("last_login_at")
 
-  conversations Conversation[]
-  tasks         Task[]
-  agentSessions AgentSession[]
+  conversations     Conversation[]
+  tasks             Task[]
+  agentSessions     AgentSession[]
+  createdTestCases  TestCase[]   @relation("TestCaseCreator")
+  reviewedTestCases TestCase[]   @relation("TestCaseReviewer")
+  testReports       TestReport[]
+  createdDefects       Defect[]        @relation("DefectCreator")
+  createdDefectComments DefectComment[] @relation("DefectCommentCreator")
 
   @@map("users")
 }
@@ -72,6 +77,7 @@ model Conversation {
   messages Message[]
   agentSessions AgentSession[]
   coordinatorPlan CoordinatorPlan?
+  testReports TestReport[]
 
   @@index([userId])
   @@index([createdAt])
@@ -185,4 +191,156 @@ model AgentSession {
   @@index([replyId])
   @@index([status])
   @@map("agent_sessions")
+}
+
+enum TestCaseStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  BASELINE
+  DEPRECATED
+}
+
+enum ExecutionStatus {
+  PASS
+  FAIL
+  ERROR
+  SKIP
+}
+
+model TestCaseGroup {
+  id        String   @id @default(uuid())
+  modelId   String   @map("model_id")
+  caseCode  String   @map("case_code")
+  latestId  String?  @map("latest_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  versions TestCase[]
+
+  @@unique([modelId, caseCode])
+  @@index([modelId])
+  @@map("test_case_groups")
+}
+
+model TestCase {
+  id             String         @id @default(uuid())
+  groupId        String         @map("group_id")
+  version        Int            @default(1)
+  status         TestCaseStatus @default(DRAFT)
+  title          String
+  coveragePoint  String?        @map("coverage_point")
+  priority       String         @default("P2")
+  inputParams    Json?          @map("input_params")
+  expectedResult Json?          @map("expected_result")
+  yamlContent    String?        @map("yaml_content") @db.Text
+  notes          String?        @db.Text
+  tags           String[]       @default([])
+  conversationId String?        @map("conversation_id")
+  sourceMode     String?        @map("source_mode")
+  reportId       String?        @map("report_id")
+  createdBy      String         @map("created_by")
+  reviewedBy     String?        @map("reviewed_by")
+  reviewNote     String?        @map("review_note")
+  reviewedAt     DateTime?      @map("reviewed_at")
+  baselinedAt    DateTime?      @map("baselined_at")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  group      TestCaseGroup   @relation(fields: [groupId], references: [id])
+  creator    User            @relation("TestCaseCreator", fields: [createdBy], references: [id])
+  reviewer   User?           @relation("TestCaseReviewer", fields: [reviewedBy], references: [id])
+  executions TestExecution[]
+  report     TestReport?     @relation(fields: [reportId], references: [id])
+  defects    Defect[]
+
+  @@unique([groupId, version])
+  @@index([status])
+  @@index([groupId])
+  @@index([conversationId])
+  @@map("test_cases")
+}
+
+model TestExecution {
+  id             String          @id @default(uuid())
+  testCaseId     String          @map("test_case_id")
+  conversationId String?         @map("conversation_id")
+  status         ExecutionStatus
+  baseUrl        String?         @map("base_url")
+  actualResult   Json?           @map("actual_result")
+  errorMessage   String?         @map("error_message") @db.Text
+  durationMs     Int?            @map("duration_ms")
+  executedAt     DateTime        @default(now()) @map("executed_at")
+  executedBy     String?         @map("executed_by")
+
+  testCase TestCase @relation(fields: [testCaseId], references: [id])
+
+  @@index([testCaseId])
+  @@index([conversationId])
+  @@index([status])
+  @@index([executedAt])
+  @@map("test_executions")
+}
+
+model TestReport {
+  id             String   @id @default(uuid())
+  name           String
+  conversationId String   @map("conversation_id")
+  executionMode  String?  @map("execution_mode")
+  htmlFile       String   @map("html_file")
+  testCasesData  Json?    @map("test_cases_data")
+  casesImported  Boolean  @default(false) @map("cases_imported")
+  uploadedDocs   String[] @default([]) @map("uploaded_docs")
+  createdBy      String   @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+  user         User         @relation(fields: [createdBy], references: [id])
+  testCases    TestCase[]
+  defects      Defect[]
+
+  @@index([conversationId])
+  @@index([createdBy])
+  @@map("test_reports")
+}
+
+model Defect {
+  id             String    @id @default(uuid())
+  title          String
+  status         String    @default("待处理")
+  severity       String    @default("P2")
+  description    String?   @db.Text
+  reportId       String?   @map("report_id")
+  testCaseId     String?   @map("test_case_id")
+  conversationId String?   @map("conversation_id")
+  createdBy      String    @map("created_by")
+  resolvedAt     DateTime? @map("resolved_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  report     TestReport?    @relation(fields: [reportId], references: [id])
+  testCase   TestCase?      @relation(fields: [testCaseId], references: [id])
+  creator    User           @relation("DefectCreator", fields: [createdBy], references: [id])
+  comments   DefectComment[]
+
+  @@index([status])
+  @@index([reportId])
+  @@index([testCaseId])
+  @@index([createdBy])
+  @@map("defects")
+}
+
+model DefectComment {
+  id        String   @id @default(uuid())
+  defectId  String   @map("defect_id")
+  content   String   @db.Text
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  defect  Defect @relation(fields: [defectId], references: [id], onDelete: Cascade)
+  creator User   @relation("DefectCommentCreator", fields: [createdBy], references: [id])
+
+  @@index([defectId])
+  @@map("defect_comments")
 }

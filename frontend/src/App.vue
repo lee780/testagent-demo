@@ -15,6 +15,27 @@
       </div>
       
       <nav class="sidebar-nav">
+        <!-- 导航链接 -->
+        <div v-if="sidebarExpanded" class="sidebar-nav-links">
+          <router-link to="/testcases" class="nav-link" active-class="nav-link-active">
+            <svg viewBox="0 0 1024 1024" width="16" height="16" fill="currentColor">
+              <path d="M880 112H144c-17.7 0-32 14.3-32 32v736c0 17.7 14.3 32 32 32h736c17.7 0 32-14.3 32-32V144c0-17.7-14.3-32-32-32zm-40 728H184V184h656v656zM664 368H460c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8h204c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8zm0 160H460c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8h204c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8zm0 160H460c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8h204c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8zM360 368h-48c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8zm0 160h-48c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8zm0 160h-48c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8h48c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8z"/>
+            </svg>
+            <span class="nav-text">用例库</span>
+          </router-link>
+          <router-link to="/reports" class="nav-link" active-class="nav-link-active">
+            <svg viewBox="0 0 1024 1024" width="16" height="16" fill="currentColor">
+              <path d="M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-40 824H232V136h560v752zM340 324h344c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H340c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8zm0 160h344c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H340c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8zm0 160h344c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H340c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8zm0 160h184c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H340c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8z"/>
+            </svg>
+            <span class="nav-text">测试报告</span>
+          </router-link>
+          <router-link to="/defects" class="nav-link" active-class="nav-link-active">
+            <svg viewBox="0 0 1024 1024" width="16" height="16" fill="currentColor">
+              <path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372zm-32-492v-48c0-4.4 3.6-8 8-8h48c4.4 0 8 3.6 8 8v48c0 4.4-3.6 8-8 8h-48c-4.4 0-8-3.6-8-8zm0 320V428c0-4.4 3.6-8 8-8h48c4.4 0 8 3.6 8 8v264c0 4.4-3.6 8-8 8h-48c-4.4 0-8-3.6-8-8z"/>
+            </svg>
+            <span class="nav-text">缺陷管理</span>
+          </router-link>
+        </div>
         <!-- 对话历史列表 -->
         <div v-if="sidebarExpanded" class="sidebar-history">
           <div v-for="group in groupedConversations" :key="group.label" class="history-group">
@@ -24,12 +45,32 @@
               :key="conv.conversation_id"
               class="history-item"
               :class="{ active: currentConversationId === conv.conversation_id }"
-              @click="loadConversation(conv.conversation_id)"
+              @click="editingConvId !== conv.conversation_id && loadConversation(conv.conversation_id)"
             >
-              <span class="history-item-title">{{ conv.title }}</span>
-              <button class="history-delete-btn" @click.stop="deleteConversation(conv.conversation_id)">
-                <el-icon><Delete /></el-icon>
-              </button>
+              <!-- 重命名输入框 -->
+              <input
+                v-if="editingConvId === conv.conversation_id"
+                ref="renameInputRef"
+                class="history-rename-input"
+                v-model="editingTitle"
+                @keydown.enter.prevent="confirmRename"
+                @keydown.esc.prevent="cancelRename"
+                @blur="confirmRename"
+                @click.stop
+              />
+              <!-- 正常标题，双击触发重命名 -->
+              <span v-else class="history-item-title" @dblclick.stop="startRename(conv)">{{ conv.title }}</span>
+              <!-- 操作按钮：编辑中隐藏 -->
+              <div v-if="editingConvId !== conv.conversation_id" class="history-actions">
+                <button class="history-action-btn" title="重命名" @click.stop="startRename(conv)">
+                  <svg viewBox="0 0 1024 1024" width="12" height="12" fill="currentColor">
+                    <path d="M880 836H144c-17.7 0-32 14.3-32 32v36c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-36c0-17.7-14.3-32-32-32zM315.8 753.5c2.7 2.7 6.3 4.2 10.1 4.2h.5l176.4-5.7c3.9-.1 7.5-1.8 10.2-4.4L826.7 334l-96.7-96.7-414.2 413.8zM765.8 180.7l-77.4-77.4c-10.5-10.5-27.6-10.5-38.1 0L574 179.8l115.5 115.5 76.3-76.3c10.5-10.6 10.5-27.7 0-38.3z"/>
+                  </svg>
+                </button>
+                <button class="history-action-btn history-delete-btn" @click.stop="deleteConversation(conv.conversation_id)" title="删除">
+                  <el-icon><Delete /></el-icon>
+                </button>
+              </div>
             </div>
           </div>
           <div v-if="conversations.length === 0" class="history-empty">
@@ -76,7 +117,7 @@
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount, computed, ref, watch } from 'vue'
+import { onMounted, onBeforeUnmount, computed, ref, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useThemeStore } from '@/stores/theme'
@@ -94,10 +135,41 @@ const { toggleTheme, toggleSidebar, initTheme } = themeStore
 
 const { isLoggedIn, displayName } = storeToRefs(userStore)
 const { conversations, currentConversationId, groupedConversations } = storeToRefs(chatStore)
-const { loadConversations, startNewChat, deleteConversation } = chatStore
+const { loadConversations, startNewChat, deleteConversation, renameConversation, updateConversationTitle } = chatStore
 
 // 用户菜单展开状态
 const showUserMenu = ref(false)
+
+// 重命名状态
+const editingConvId = ref(null)
+const editingTitle = ref('')
+const renameInputRef = ref(null)
+
+const startRename = (conv) => {
+  editingConvId.value = conv.conversation_id
+  editingTitle.value = conv.title
+  nextTick(() => {
+    const el = Array.isArray(renameInputRef.value) ? renameInputRef.value[0] : renameInputRef.value
+    el?.focus()
+    el?.select()
+  })
+}
+
+const confirmRename = async () => {
+  if (!editingConvId.value) return
+  const id = editingConvId.value
+  const title = editingTitle.value.trim()
+  editingConvId.value = null   // 先清空，防止 blur 重复触发
+  editingTitle.value = ''
+  if (title) {
+    await renameConversation(id, title)
+  }
+}
+
+const cancelRename = () => {
+  editingConvId.value = null
+  editingTitle.value = ''
+}
 
 // 监听路由变化，如果在首页且没有对话ID，则认为是新建对话
 watch(() => route.path, (newPath) => {
@@ -299,6 +371,31 @@ watch(isLoggedIn, (loggedIn) => {
   overflow-x: hidden;
 }
 
+.sidebar-nav-links {
+  padding: 8px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 4px;
+}
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+.nav-link:hover {
+  background: var(--border-color);
+  color: var(--text-primary);
+}
+.nav-link-active {
+  background: var(--send-btn);
+  color: white !important;
+}
+
 .sidebar-history {
   display: flex;
   flex-direction: column;
@@ -367,6 +464,50 @@ watch(isLoggedIn, (loggedIn) => {
 .history-delete-btn:hover {
   color: #ef4444;
   background: rgba(239, 68, 68, 0.1);
+}
+
+.history-actions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.history-item:hover .history-actions {
+  display: flex;
+}
+
+.history-action-btn {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  padding: 0;
+  transition: all 0.15s;
+}
+
+.history-action-btn:hover {
+  color: var(--text-primary);
+  background: var(--border-color);
+}
+
+.history-rename-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--input-bg);
+  border: 1px solid #5b9bd5;
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 2px 6px;
+  outline: none;
+  font-family: inherit;
 }
 
 .history-empty {

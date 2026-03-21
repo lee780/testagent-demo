@@ -89,6 +89,33 @@ async function setupDb(db: DbSetup): Promise<void> {
   }
 }
 
+// ── Suite config (read from YAML suite section) ──────────
+
+interface SuiteConfig {
+  endpoint: string;
+  method: string;
+  contentType: string;
+}
+
+// ── Concurrency helper ────────────────────────────────────
+
+async function runWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let index = 0;
+  const worker = async (): Promise<void> => {
+    while (index < items.length) {
+      const i = index++;
+      results[i] = await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, worker));
+  return results;
+}
+
 // ── Single test case runner ───────────────────────────────
 
 interface AssertionResult {
@@ -105,34 +132,47 @@ interface CaseResult {
   name: string;
   category: string;
   priority: string;
+  coverage_point?: string;
   status: "PASSED" | "FAILED" | "ERROR";
   duration_ms: number;
   http_status?: number;
+  request_url?: string;
+  request_body?: string;
+  response_body?: string;
+  db_setup_summary?: string;
   assertions: AssertionResult[];
   error?: string;
 }
 
-async function runOneCase(tc: any, baseUrl: string): Promise<CaseResult> {
+async function runOneCase(tc: any, baseUrl: string, suite: SuiteConfig): Promise<CaseResult> {
   const start = Date.now();
   const id: string = tc.id ?? "UNKNOWN";
   const name: string = tc.name ?? "";
   const category: string = tc.category ?? "";
   const priority: string = tc.priority ?? "P2";
+  const coverage_point: string | undefined = tc.coverage_point;
 
   try {
     // 1. DB preconditions
     const dbSetup: DbSetup = tc.preconditions?.db_setup ?? {};
     await setupDb(dbSetup);
 
-    // 2. HTTP request
-    const body: string = tc.request?.body ?? "";
-    const endpoint: string = "/mock/model/score";
-    const url = `${baseUrl}${endpoint}`;
+    // Build human-readable DB setup summary
+    const dbParts: string[] = [];
+    if (dbSetup.user_info) dbParts.push(`user_level=${dbSetup.user_info.user_level}`);
+    if (dbSetup.account_balance) dbParts.push(`avg_3m_balance=${dbSetup.account_balance.avg_3m_balance}`);
+    if (dbSetup.cgs_social_security) dbParts.push(`social_security_flag=${dbSetup.cgs_social_security.social_security_flag}`);
+    if (dbSetup.salary_summary) dbParts.push(`monthly_salary=${dbSetup.salary_summary.monthly_salary}`);
+    const db_setup_summary = dbParts.length > 0 ? dbParts.join("  |  ") : "（无预置数据）";
 
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/xml; charset=utf-8" },
-      body,
+    // 2. HTTP request — endpoint/method/content-type from suite config
+    const requestBody: string = tc.request?.body ?? "";
+    const requestUrl = `${baseUrl}${suite.endpoint}`;
+
+    const resp = await fetch(requestUrl, {
+      method: suite.method,
+      headers: { "Content-Type": suite.contentType },
+      body: requestBody,
     });
 
     const responseXml = await resp.text();
@@ -149,15 +189,19 @@ async function runOneCase(tc: any, baseUrl: string): Promise<CaseResult> {
     const allPassed = results.every((r) => r.passed);
 
     return {
-      id, name, category, priority,
+      id, name, category, priority, coverage_point,
       status: allPassed ? "PASSED" : "FAILED",
       duration_ms,
       http_status: resp.status,
+      request_url: requestUrl,
+      request_body: requestBody,
+      response_body: responseXml,
+      db_setup_summary,
       assertions: results,
     };
   } catch (err: any) {
     return {
-      id, name, category, priority,
+      id, name, category, priority, coverage_point,
       status: "ERROR",
       duration_ms: Date.now() - start,
       assertions: [],
@@ -168,7 +212,7 @@ async function runOneCase(tc: any, baseUrl: string): Promise<CaseResult> {
 
 // ── Markdown report ───────────────────────────────────────
 
-function buildReport(results: CaseResult[], baseUrl: string, durationMs: number): string {
+function buildReport(results: CaseResult[], baseUrl: string, durationMs: number, suiteName = "接口测试"): string {
   const total = results.length;
   const passed = results.filter((r) => r.status === "PASSED").length;
   const failed = results.filter((r) => r.status === "FAILED").length;
@@ -177,7 +221,7 @@ function buildReport(results: CaseResult[], baseUrl: string, durationMs: number)
   const now = new Date().toISOString().replace("T", " ").slice(0, 19);
 
   const lines: string[] = [
-    `# MODEL_001 接口测试报告`,
+    `# ${suiteName} — 测试报告`,
     ``,
     `- **生成时间**: ${now}`,
     `- **被测地址**: ${baseUrl}/mock/model/score`,
@@ -257,7 +301,24 @@ function buildHtmlReport(results: CaseResult[], baseUrl: string, durationMs: num
     return `<tr><td>${esc(cat)}</td><td>${catRes.length}</td><td class="pass">${cp}</td><td class="fail">${catRes.length - cp}</td></tr>`;
   }).join("\n");
 
-  // Case rows
+  // Coverage point summary table
+  const coverageMap = new Map<string, { total: number; passed: number }>();
+  for (const r of results) {
+    const cp = r.coverage_point ?? "（未标注）";
+    const prev = coverageMap.get(cp) ?? { total: 0, passed: 0 };
+    coverageMap.set(cp, {
+      total: prev.total + 1,
+      passed: prev.passed + (r.status === "PASSED" ? 1 : 0),
+    });
+  }
+  const coverageRows = [...coverageMap.entries()].map(([cp, s]) => {
+    const allPass = s.passed === s.total;
+    const cls = allPass ? "pass" : "fail";
+    const icon = allPass ? "✅" : "❌";
+    return `<tr><td class="cp-cell">${esc(cp)}</td><td>${s.total}</td><td class="${cls}">${s.passed}</td><td class="${s.total - s.passed > 0 ? "fail" : "pass"}">${s.total - s.passed}</td><td>${icon}</td></tr>`;
+  }).join("\n");
+
+  // Case rows with execution detail
   const caseRows = results.map((r) => {
     const statusCls = r.status === "PASSED" ? "badge-pass" : r.status === "FAILED" ? "badge-fail" : "badge-error";
     const assertHtml = r.assertions.map((a) => {
@@ -269,11 +330,19 @@ function buildHtmlReport(results: CaseResult[], baseUrl: string, durationMs: num
       </div>`;
     }).join("\n");
     const errorHtml = r.error ? `<div class="error-msg">⚠ ${esc(r.error)}</div>` : "";
+    const coverageTag = r.coverage_point
+      ? `<span class="cp-tag" title="设计来源">${esc(r.coverage_point)}</span>` : "";
+    const reqHtml = r.request_body
+      ? `<div class="log-block"><div class="log-label">📤 请求报文 <span class="log-url">${esc(r.request_url ?? "")}</span></div><pre class="log-pre">${esc(r.request_body)}</pre></div>` : "";
+    const respHtml = r.response_body
+      ? `<div class="log-block"><div class="log-label">📥 应答报文</div><pre class="log-pre">${esc(r.response_body)}</pre></div>` : "";
+    const dbHtml = r.db_setup_summary
+      ? `<div class="log-block"><div class="log-label">🗄 埋数（DB preconditions）</div><div class="log-db">${esc(r.db_setup_summary)}</div></div>` : "";
     return `
     <tr class="case-row" onclick="toggleDetail('${esc(r.id)}')">
       <td><span class="badge ${statusCls}">${r.status}</span></td>
       <td class="case-id">${esc(r.id)}</td>
-      <td>${esc(r.name)}</td>
+      <td>${esc(r.name)}${coverageTag}</td>
       <td>${esc(r.category)}</td>
       <td><span class="priority-badge p${r.priority.toLowerCase()}">${r.priority}</span></td>
       <td>${r.http_status ?? "-"}</td>
@@ -283,7 +352,13 @@ function buildHtmlReport(results: CaseResult[], baseUrl: string, durationMs: num
       <td colspan="7">
         <div class="detail-body">
           ${errorHtml}
-          ${assertHtml || "<div class='no-assert'>无断言</div>"}
+          ${dbHtml}
+          ${reqHtml}
+          ${respHtml}
+          <div class="log-block assertions-block">
+            <div class="log-label">✔ 检查点断言</div>
+            ${assertHtml || "<div class='no-assert'>无断言</div>"}
+          </div>
         </div>
       </td>
     </tr>`;
@@ -343,6 +418,16 @@ function buildHtmlReport(results: CaseResult[], baseUrl: string, durationMs: num
   .fail{color:#c62828;font-weight:600}
   .case-id{font-family:monospace;font-size:12px;color:#555}
   .footer{text-align:center;color:#aaa;font-size:12px;padding:20px;margin-top:8px}
+  /* execution log styles */
+  .cp-tag{display:inline-block;margin-left:8px;padding:1px 8px;background:#e8f4fd;color:#1565c0;border-radius:10px;font-size:11px;font-weight:500;vertical-align:middle}
+  .cp-cell{font-size:12px;color:#444;max-width:360px}
+  .log-block{margin-bottom:12px}
+  .log-block:last-child{margin-bottom:0}
+  .log-label{font-size:12px;font-weight:600;color:#555;margin-bottom:6px}
+  .log-url{font-weight:400;color:#888;font-family:monospace;font-size:11px;margin-left:6px}
+  .log-pre{background:#f5f6fa;border:1px solid #e0e0e0;border-radius:4px;padding:10px 12px;font-family:monospace;font-size:12px;color:#333;overflow-x:auto;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto}
+  .log-db{background:#f5f6fa;border:1px solid #e0e0e0;border-radius:4px;padding:8px 12px;font-family:monospace;font-size:12px;color:#333}
+  .assertions-block .assert-row{padding:8px 0}
 </style>
 </head>
 <body>
@@ -371,9 +456,18 @@ function buildHtmlReport(results: CaseResult[], baseUrl: string, durationMs: num
     </table>
   </div>
 
+  <!-- Coverage Traceability Table -->
+  <div class="section">
+    <div class="section-title">设计追溯（思维导图覆盖点 → 执行结果）</div>
+    <table>
+      <thead><tr><th>覆盖点（思维导图节点）</th><th>用例数</th><th>通过</th><th>失败/错误</th><th>结果</th></tr></thead>
+      <tbody>${coverageRows}</tbody>
+    </table>
+  </div>
+
   <!-- Case Details -->
   <div class="section">
-    <div class="section-title">用例明细（点击行展开断言详情）</div>
+    <div class="section-title">用例明细（点击行展开：埋数 / 请求报文 / 应答报文 / 检查点）</div>
     <table>
       <thead><tr><th>状态</th><th>用例ID</th><th>用例名称</th><th>分类</th><th>优先级</th><th>HTTP</th><th>耗时</th></tr></thead>
       <tbody>${caseRows}</tbody>
@@ -390,6 +484,26 @@ function toggleDetail(id){
 </script>
 </body>
 </html>`;
+}
+
+// ── Save raw test case data for later import ─────────────
+
+function saveRawTestCases(
+  cases: Array<unknown>,
+  outputDir: string,
+  userId: string,
+  conversationId: string,
+): string | undefined {
+  if (!outputDir || !userId || !conversationId) return undefined;
+  try {
+    const outDir = resolve(outputDir, userId, conversationId);
+    mkdirSync(outDir, { recursive: true });
+    const rawPath = join(outDir, "test_cases_raw.json");
+    writeFileSync(rawPath, JSON.stringify(cases, null, 2), "utf-8");
+    return rawPath;
+  } catch {
+    return undefined;
+  }
 }
 
 // ── Tool Definition ───────────────────────────────────────
@@ -434,15 +548,18 @@ export function createTestRunnerTools(config?: ToolConfig): AgentToolDef[] {
       }
 
       const suiteStart = Date.now();
-      const allResults: CaseResult[] = [];
+      const parseErrors: CaseResult[] = [];
+      let suiteName = "接口测试";
 
+      // Phase 1: parse all YAML files, collect cases + suite configs
+      const allJobs: Array<{ tc: any; suite: SuiteConfig }> = [];
       for (const filePath of files) {
         let parsed: any;
         try {
           const raw = readFileSync(filePath, "utf-8");
           parsed = parseYaml(raw);
         } catch (err: any) {
-          allResults.push({
+          parseErrors.push({
             id: filePath, name: filePath, category: "", priority: "P2",
             status: "ERROR", duration_ms: 0, assertions: [],
             error: `YAML parse error: ${err.message}`,
@@ -450,17 +567,53 @@ export function createTestRunnerTools(config?: ToolConfig): AgentToolDef[] {
           continue;
         }
 
-        // Support both single test_cases array and a list of test_cases blocks
-        const cases: any[] = parsed?.test_cases ?? [];
-        for (const tc of cases) {
-          const result = await runOneCase(tc, baseUrl);
-          allResults.push(result);
+        if (parsed?.suite?.name && suiteName === "接口测试") {
+          suiteName = parsed.suite.name;
+        }
+
+        const suiteConfig: SuiteConfig = {
+          endpoint: parsed?.suite?.endpoint ?? "/mock/model/score",
+          method: (parsed?.suite?.method ?? "POST").toUpperCase(),
+          contentType: parsed?.suite?.content_type ?? "application/xml; charset=utf-8",
+        };
+
+        for (const tc of (parsed?.test_cases ?? [])) {
+          allJobs.push({ tc, suite: suiteConfig });
         }
       }
 
+      // Save raw test case data to output dir for later manual import
+      if (config?.outputDir && config?.userId && config?.conversationId) {
+        saveRawTestCases(allJobs.map(j => j.tc), config.outputDir, config.userId, config.conversationId);
+      }
+
+      // Phase 2: run cases concurrently (limit 10), emit progress after each
+      const total = allJobs.length;
+      let completed = 0;
+      let progressPassed = 0;
+      let progressFailed = 0;
+
+      const concurrentResults = await runWithConcurrency(allJobs, 10, async ({ tc, suite }) => {
+        const result = await runOneCase(tc, baseUrl, suite);
+        completed++;
+        if (result.status === "PASSED") progressPassed++;
+        else if (result.status === "FAILED") progressFailed++;
+        config?.onProgress?.({
+          caseId: result.id,
+          caseName: result.name,
+          status: result.status,
+          current: completed,
+          total,
+          passed: progressPassed,
+          failed: progressFailed,
+        });
+        return result;
+      });
+
+      const allResults: CaseResult[] = [...parseErrors, ...concurrentResults];
       const suiteDuration = Date.now() - suiteStart;
-      const report = buildReport(allResults, baseUrl, suiteDuration);
-      const htmlReport = buildHtmlReport(allResults, baseUrl, suiteDuration);
+      const report = buildReport(allResults, baseUrl, suiteDuration, suiteName);
+      const htmlReport = buildHtmlReport(allResults, baseUrl, suiteDuration, suiteName);
 
       // Write Markdown report
       const reportPath = params.report_path ?? join(yamlDir, "test_report.md");

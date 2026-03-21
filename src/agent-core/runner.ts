@@ -11,10 +11,13 @@
  * The runner is designed to work with the pi-mono API surface described in the plan.
  */
 
+import { getPrisma } from '../server/config/database.js';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { buildCustomTools, createToolConfig, type ToolConfig } from "./tools/index.js";
 import { TaskManager, type ProgressCallback, type TaskEvent } from "./orchestrator/task-manager.js";
 import { createOrchestratorTools, type WorkerFn } from "./orchestrator/orchestrator-tools.js";
-import { buildSystemPrompt } from "./system-prompt.js";
+import { buildSystemPrompt, type TestMode } from "./system-prompt.js";
 import { createEventBridge, type PiAgentEvent, type SSEEvent } from "./subscribe.js";
 import type { AgentToolDef } from "./tools/code-index.js";
 
@@ -43,6 +46,8 @@ export interface RunTestAgentParams {
   conversationId?: string;
   /** Output directory for downloadable files. */
   outputDir?: string;
+  /** Test mode — controls which system prompt and behavior to use. */
+  mode?: TestMode;
   /** Custom instructions to append to system prompt. */
   customInstructions?: string;
   /** SSE event callback. */
@@ -70,12 +75,21 @@ export interface RunTestAgentResult {
  * 4. Creates and runs the pi AgentSession
  */
 export async function runTestAgent(params: RunTestAgentParams): Promise<RunTestAgentResult> {
+  // For regression mode, pre-populate workspace/baseline/ from DB BASELINE cases
+  if (params.mode === 'regression') {
+    await setupRegressionBaseline(params.workspace);
+  }
+
   // 1. Build tool config
   const toolConfig = createToolConfig({
     workspace: params.workspace,
     userId: params.userId,
     conversationId: params.conversationId,
     outputDir: params.outputDir,
+    onProgress: (event) => params.onEvent({
+      type: 'test_progress',
+      data: { ...event },
+    }),
   });
 
   // 2. Event bridge
@@ -106,6 +120,7 @@ export async function runTestAgent(params: RunTestAgentParams): Promise<RunTestA
   // 6. Build system prompt
   const systemPrompt = buildSystemPrompt({
     workspace: params.workspace,
+    mode: params.mode,
     customInstructions: params.customInstructions,
   });
 
@@ -217,6 +232,63 @@ async function runWithPiMono(
 }
 
 // ── Standalone Mode (no pi-mono) ─────────────────────────
+
+// ── Regression Baseline Setup ────────────────────────────
+
+/**
+ * For regression mode: fetch all BASELINE test cases from DB and write
+ * their YAML to workspace/baseline/ so the agent can find them directly.
+ */
+async function setupRegressionBaseline(workspaceDir: string): Promise<void> {
+  try {
+    const prisma = getPrisma();
+
+    const groups = await prisma.testCaseGroup.findMany({ select: { latestId: true } });
+    const latestIds = groups.map((g: any) => g.latestId).filter(Boolean) as string[];
+
+    const cases = await prisma.testCase.findMany({
+      where: { id: { in: latestIds }, status: 'BASELINE' },
+      include: { group: { select: { modelId: true, caseCode: true } } },
+    });
+
+    if (cases.length === 0) return;
+
+    const baselineDir = join(workspaceDir, 'baseline');
+    mkdirSync(baselineDir, { recursive: true });
+
+    for (const tc of cases as any[]) {
+      const filename = `${tc.group.caseCode}.yaml`;
+
+      // Prefer stored yamlContent (full original YAML)
+      if (tc.yamlContent) {
+        try {
+          // yamlContent may be JSON-serialized raw tc object or YAML string
+          const parsed = JSON.parse(tc.yamlContent);
+          const { stringify } = await import('yaml');
+          writeFileSync(join(baselineDir, filename), stringify(parsed), 'utf-8');
+          continue;
+        } catch {
+          // Fall through to reconstruction
+        }
+      }
+
+      // Reconstruct minimal YAML from inputParams / expectedResult
+      const { stringify } = await import('yaml');
+      const yamlObj = {
+        id: tc.group.caseCode,
+        name: tc.title,
+        coverage_point: tc.coveragePoint ?? '',
+        priority: tc.priority,
+        request: tc.inputParams ?? {},
+        assertions: Array.isArray(tc.expectedResult) ? tc.expectedResult : [],
+      };
+      writeFileSync(join(baselineDir, filename), stringify(yamlObj), 'utf-8');
+    }
+  } catch (err) {
+    // Non-fatal: agent will fall back to searching for YAML files itself
+    console.warn('[TestAgent] setupRegressionBaseline failed:', err);
+  }
+}
 
 async function runStandalone(
   params: RunTestAgentParams,

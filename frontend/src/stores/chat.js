@@ -11,6 +11,19 @@ export const useChatStore = defineStore('chat', () => {
   // Pending title updates that arrived before loadConversations() completed
   const pendingTitleUpdates = ref({})
 
+  // Per-conversation test mode map
+  const conversationModes = ref({})
+
+  const setConversationMode = (conversationId, mode) => {
+    if (conversationId) {
+      conversationModes.value = { ...conversationModes.value, [conversationId]: mode }
+    }
+  }
+
+  const getConversationMode = (conversationId) => {
+    return conversationModes.value[conversationId] || 'systematic'
+  }
+
   // 时间分组辅助函数
   const groupConversationsByTime = (conversations) => {
     const now = new Date()
@@ -116,6 +129,17 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  const renameConversation = async (conversationId, title) => {
+    const trimmed = title.trim()
+    if (!trimmed) return
+    try {
+      await api.updateConversation(conversationId, { title: trimmed })
+      updateConversationTitle(conversationId, trimmed)
+    } catch (error) {
+      console.error('重命名对话失败:', error)
+    }
+  }
+
   return {
     conversations,
     currentConversationId,
@@ -127,6 +151,10 @@ export const useChatStore = defineStore('chat', () => {
     startNewChat,
     deleteConversation,
     toggleGroup,
-    updateConversationTitle
+    updateConversationTitle,
+    renameConversation,
+    conversationModes,
+    setConversationMode,
+    getConversationMode,
   }
 })
