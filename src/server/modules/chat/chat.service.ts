@@ -155,6 +155,9 @@ export async function* sendMessageStreaming(
   // 5. Prepare workspace
   const workspace = new AgentWorkspace({ rootDir: config.workspace.dir });
   await workspace.ensure();
+  // Also ensure the per-conversation scratch dir exists (agent's cwd)
+  const { mkdir } = await import('node:fs/promises');
+  await mkdir(workspace.getScratchDir(conversationId), { recursive: true });
 
   // 6. AbortController for interruption
   const abortController = new AbortController();

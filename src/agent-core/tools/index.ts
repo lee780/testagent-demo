@@ -7,6 +7,7 @@ export { createTestExecutorTools } from "./test-executor.js";
 export { createOutputFileTools } from "./output-file.js";
 export { createDatabaseTools } from "./database-ops.js";
 export { createTestRunnerTools } from "./test-runner.js";
+export { createTestCasesHtmlTools } from "./test-cases-html.js";
 export { createToolConfig, assertWithinWorkspace } from "./config.js";
 export type { ToolConfig } from "./config.js";
 export type { AgentToolDef, AgentToolResult } from "./code-index.js";
@@ -18,6 +19,7 @@ import { createTestExecutorTools } from "./test-executor.js";
 import { createOutputFileTools } from "./output-file.js";
 import { createDatabaseTools } from "./database-ops.js";
 import { createTestRunnerTools } from "./test-runner.js";
+import { createTestCasesHtmlTools } from "./test-cases-html.js";
 
 /**
  * Build the full set of custom tools for TestAgent.
@@ -30,5 +32,6 @@ export function buildCustomTools(config: ToolConfig): AgentToolDef[] {
     ...createOutputFileTools(config),
     ...createDatabaseTools(),
     ...createTestRunnerTools(config),
+    ...createTestCasesHtmlTools(config),
   ];
 }

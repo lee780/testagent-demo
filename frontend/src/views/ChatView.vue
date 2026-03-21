@@ -89,6 +89,7 @@
               <button
                 class="action-btn upload-btn"
                 @click="triggerFileInput"
+                :disabled="loading"
                 title="上传文件"
               >
                 <el-icon><Paperclip /></el-icon>
@@ -133,7 +134,14 @@
                 </div>
                 <div class="message-text">
                   <template v-if="msg.role === 'user'">
-                    {{ msg.content }}
+                    <span class="user-msg-text">{{ msg.content.replace(/\n\n\[文件已上传:[^\]]*\]/g, '').replace(/\n\n\[文件上传失败:[^\]]*\]/g, '').trim() }}</span>
+                    <div v-if="/\[文件已上传:/.test(msg.content)" class="user-msg-files">
+                      <span
+                        v-for="fname in msg.content.match(/\[文件已上传:\s*([^\]]+)\]/)?.[1]?.split(',').map(s => s.trim()) || []"
+                        :key="fname"
+                        class="user-file-tag"
+                      >📄 {{ fname }}</span>
+                    </div>
                     <button
                       v-if="!loading && index === messages.length - 1"
                       class="rerun-btn"
@@ -310,6 +318,7 @@
                 <button
                   class="action-btn upload-btn"
                   @click="triggerFileInput"
+                  :disabled="loading"
                   title="上传文件"
                 >
                   <el-icon><Paperclip /></el-icon>
@@ -463,7 +472,7 @@ const loadPresets = async () => {
     }
 
     if (data.data.files?.length) {
-      const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 15)
+      const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)
       selectedFiles.value = data.data.files.map(f => {
         const dot = f.name.lastIndexOf('.')
         const base = dot >= 0 ? f.name.slice(0, dot) : f.name
@@ -902,8 +911,10 @@ const scrollToBottom = (force = false) => {
 }
 
 // 初始化
-onMounted(() => {
+onMounted(async () => {
   loadConversations()
+  await nextTick()
+  inputTextarea.value?.focus()
 })
 </script>
 
@@ -1220,6 +1231,25 @@ onMounted(() => {
 
 .message.user .message-text {
   white-space: pre-wrap;
+}
+
+.user-msg-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.user-file-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(103, 194, 58, 0.12);
+  border: 1px solid rgba(103, 194, 58, 0.3);
+  color: var(--text-secondary, #888);
+  font-size: 12px;
 }
 
 .rerun-btn {

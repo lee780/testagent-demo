@@ -45,6 +45,15 @@ export function createOutputFileTools(config: ToolConfig): AgentToolDef[] {
         return textResult({ status: "error", error: "Invalid filename" });
       }
 
+      // Only HTML files are allowed as final deliverables
+      if (!safeName.toLowerCase().endsWith('.html')) {
+        return textResult({
+          status: "error",
+          error: `Only .html files are allowed as output deliverables. Got: "${safeName}". ` +
+            `YAML/MD/TXT files are intermediate files — save them to the workspace scratch directory instead, not the output directory.`,
+        });
+      }
+
       const targetDir = resolve(config.outputDir, config.userId, config.conversationId);
       await mkdir(targetDir, { recursive: true });
 

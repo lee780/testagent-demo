@@ -232,7 +232,7 @@ export async function registerChatRoutes(app: FastifyInstance): Promise<void> {
         try { return fs.readFileSync(p, 'utf-8'); } catch { return null; }
       };
       const message = readSafe(path.join(presetsDir, '测试提问')) ?? '';
-      const fileNames = ['test_case_template.yaml', 'MODEL001_用例样例.yaml'];
+      const fileNames = ['MODEL001_业务规则文档.md', 'MODEL001_用例样例.yaml'];
       const files = fileNames
         .map(name => ({ name, content: readSafe(path.join(presetsDir, name)) }))
         .filter((f): f is { name: string; content: string } => f.content !== null);
