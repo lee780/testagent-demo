@@ -68,8 +68,9 @@ export async function authenticate(request: FastifyRequest, _reply: FastifyReply
     }
   } catch (err) {
     if (err instanceof UnauthorizedError) throw err;
-    // Redis connection error — allow access gracefully
-    logger.error({ err }, 'Redis session check failed');
+    // Redis connection error — fail closed (deny access rather than allow)
+    logger.error({ err }, 'Redis session check failed — denying request');
+    throw new UnauthorizedError('认证服务暂时不可用，请稍后重试');
   }
 
   // Get user from DB

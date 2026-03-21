@@ -45,24 +45,31 @@ export async function createReport(input: CreateReportInput) {
   return report;
 }
 
-// List reports for a user
-export async function listReports(userId: string) {
-  const reports = await prisma.testReport.findMany({
-    where: { createdBy: userId },
-    orderBy: { createdAt: 'desc' },
-    select: {
-      id: true,
-      name: true,
-      conversationId: true,
-      executionMode: true,
-      htmlFile: true,
-      casesImported: true,
-      uploadedDocs: true,
-      createdAt: true,
-      conversation: { select: { title: true } },
-    },
-  });
-  return reports;
+// List reports for a user (paginated)
+export async function listReports(userId: string, page = 1, pageSize = 20) {
+  const skip = (page - 1) * pageSize;
+  const where = { createdBy: userId };
+  const [total, items] = await Promise.all([
+    prisma.testReport.count({ where }),
+    prisma.testReport.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: pageSize,
+      select: {
+        id: true,
+        name: true,
+        conversationId: true,
+        executionMode: true,
+        htmlFile: true,
+        casesImported: true,
+        uploadedDocs: true,
+        createdAt: true,
+        conversation: { select: { title: true } },
+      },
+    }),
+  ]);
+  return { total, page, pageSize, items };
 }
 
 // Get a single report
@@ -124,12 +131,13 @@ export async function importTestCases(reportId: string, userId: string) {
   }>;
 
   const created: string[] = [];
+  const failed: Array<{ caseId: string; reason: string }> = [];
 
   for (const tc of rawCases) {
+    const caseCode = tc.id ?? `TC_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     try {
       const modelIdMatch = tc.id?.match(/TC_([A-Z0-9]+)_/);
       const modelId = modelIdMatch ? modelIdMatch[1] : 'UNKNOWN';
-      const caseCode = tc.id ?? `TC_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
       // Upsert TestCaseGroup
       let group = await prisma.testCaseGroup.findUnique({
@@ -176,8 +184,8 @@ export async function importTestCases(reportId: string, userId: string) {
       });
 
       created.push(testCase.id);
-    } catch {
-      // Skip individual failures
+    } catch (err: unknown) {
+      failed.push({ caseId: caseCode, reason: err instanceof Error ? err.message : String(err) });
     }
   }
 
@@ -187,5 +195,5 @@ export async function importTestCases(reportId: string, userId: string) {
     data: { casesImported: true },
   });
 
-  return { imported: created.length, ids: created };
+  return { imported: created.length, ids: created, failed };
 }

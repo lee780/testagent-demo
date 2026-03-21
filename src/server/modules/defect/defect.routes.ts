@@ -23,8 +23,15 @@ const addCommentSchema = z.object({
 export async function registerDefectRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/defects', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
     const userId = request.currentUser!.user_id;
-    const query = request.query as { status?: string; severity?: string; reportId?: string };
-    const defects = await defectService.listDefects({ createdBy: userId, ...query });
+    const query = request.query as { status?: string; severity?: string; reportId?: string; page?: string; pageSize?: string };
+    const defects = await defectService.listDefects({
+      createdBy: userId,
+      status: query.status,
+      severity: query.severity,
+      reportId: query.reportId,
+      page: query.page ? parseInt(query.page, 10) : undefined,
+      pageSize: query.pageSize ? parseInt(query.pageSize, 10) : undefined,
+    });
     return { success: true, data: defects };
   });
 

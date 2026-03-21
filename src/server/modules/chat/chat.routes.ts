@@ -7,6 +7,7 @@ import { streamSSE } from './sse.handler.js';
 import { getLogger } from '../../config/logger.js';
 import path from 'path';
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 import { getConfig } from '../../config/index.js';
 
 // In-memory file index (same pattern as Python backend)
@@ -164,15 +165,15 @@ export async function registerChatRoutes(app: FastifyInstance): Promise<void> {
         return { success: true, data: [] };
       }
 
-      const files = fs.readdirSync(dir)
-        .filter(name => {
-          const stat = fs.statSync(path.join(dir, name));
-          return stat.isFile();
-        })
-        .map(name => {
-          const stat = fs.statSync(path.join(dir, name));
-          return { name, size: stat.size, mtime: stat.mtimeMs };
-        });
+      const entries = await fsPromises.readdir(dir, { withFileTypes: true });
+      const files = await Promise.all(
+        entries
+          .filter(e => e.isFile())
+          .map(async e => {
+            const stat = await fsPromises.stat(path.join(dir, e.name));
+            return { name: e.name, size: stat.size, mtime: stat.mtimeMs };
+          })
+      );
 
       return { success: true, data: files };
     }

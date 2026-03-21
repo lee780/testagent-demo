@@ -17,22 +17,31 @@ export async function listDefects(params: {
   status?: string;
   severity?: string;
   reportId?: string;
+  page?: number;
+  pageSize?: number;
 }) {
-  const { createdBy, status, severity, reportId } = params;
+  const { createdBy, status, severity, reportId, page = 1, pageSize = 20 } = params;
   const where: Record<string, unknown> = { createdBy };
   if (status) where.status = status;
   if (severity) where.severity = severity;
   if (reportId) where.reportId = reportId;
 
-  return prisma.defect.findMany({
-    where,
-    orderBy: { createdAt: 'desc' },
-    include: {
-      report: { select: { id: true, name: true } },
-      testCase: { select: { id: true, title: true } },
-      _count: { select: { comments: true } },
-    },
-  });
+  const skip = (page - 1) * pageSize;
+  const [total, items] = await Promise.all([
+    prisma.defect.count({ where }),
+    prisma.defect.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: pageSize,
+      include: {
+        report: { select: { id: true, name: true } },
+        testCase: { select: { id: true, title: true } },
+        _count: { select: { comments: true } },
+      },
+    }),
+  ]);
+  return { total, page, pageSize, items };
 }
 
 export async function getDefect(id: string, userId: string) {

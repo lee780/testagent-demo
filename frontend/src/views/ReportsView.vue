@@ -92,7 +92,7 @@ async function fetchReports() {
     const token = localStorage.getItem('access_token')
     const res = await fetch('/api/reports', { headers: { Authorization: `Bearer ${token}` } })
     const data = await res.json()
-    if (data.success) reports.value = data.data
+    if (data.success) reports.value = data.data.items ?? data.data ?? []
   } catch {
     ElMessage.error('加载报告列表失败')
   } finally {

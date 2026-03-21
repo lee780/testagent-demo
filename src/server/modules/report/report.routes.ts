@@ -20,10 +20,15 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
     return { success: true, data: report };
   });
 
-  // GET /api/reports — list
+  // GET /api/reports — list (paginated)
   app.get('/api/reports', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
     const userId = request.currentUser!.user_id;
-    const reports = await reportService.listReports(userId);
+    const { page, pageSize } = request.query as { page?: string; pageSize?: string };
+    const reports = await reportService.listReports(
+      userId,
+      page ? parseInt(page, 10) : undefined,
+      pageSize ? parseInt(pageSize, 10) : undefined,
+    );
     return { success: true, data: reports };
   });
 

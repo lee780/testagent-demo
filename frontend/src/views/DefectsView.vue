@@ -106,7 +106,7 @@ async function fetchDefects() {
     if (filterSeverity.value) params.append('severity', filterSeverity.value)
     const res = await fetch(`/api/defects?${params}`, { headers: { Authorization: `Bearer ${token}` } })
     const data = await res.json()
-    if (data.success) defects.value = data.data
+    if (data.success) defects.value = data.data.items ?? data.data ?? []
   } catch {
     ElMessage.error('加载缺陷列表失败')
   } finally {

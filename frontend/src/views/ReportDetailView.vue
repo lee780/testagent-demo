@@ -230,7 +230,12 @@ async function importCases() {
     })
     const data = await res.json()
     if (data.success) {
-      ElMessage.success(`已导入 ${data.data.imported} 条用例（草稿状态）`)
+      const failedCount = data.data.failed?.length ?? 0
+      if (failedCount > 0) {
+        ElMessage.warning(`已导入 ${data.data.imported} 条，${failedCount} 条失败（重复用例编号等原因）`)
+      } else {
+        ElMessage.success(`已导入 ${data.data.imported} 条用例（草稿状态）`)
+      }
       await fetchReport()
     } else {
       ElMessage.error(data.error || '入库失败')

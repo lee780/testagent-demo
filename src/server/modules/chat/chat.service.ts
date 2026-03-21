@@ -24,9 +24,21 @@ const activeAbortControllers = new Map<string, AbortController>();
 
 // ── AsyncQueue utility ─────────────────────────────────────
 
+// Heartbeat interval (ms). Keeps SSE connection alive during long agent thinks.
+// Configurable via SSE_HEARTBEAT_INTERVAL_MS env var; default 15 s.
+const HEARTBEAT_INTERVAL_MS = parseInt(process.env.SSE_HEARTBEAT_INTERVAL_MS ?? '15000', 10);
+
+// Idle timeout (ms) after which the queue stops waiting if no items arrive.
+// Should be well above the longest expected agent think time.
+// Configurable via SSE_IDLE_TIMEOUT_MS env var; default 120 s.
+const IDLE_TIMEOUT_MS = parseInt(process.env.SSE_IDLE_TIMEOUT_MS ?? '120000', 10);
+
+const HEARTBEAT_ITEM = { type: 'heartbeat' } as const;
+
 class AsyncQueue<T> {
   private queue: T[] = [];
   private resolve: (() => void) | null = null;
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 
   push(item: T): void {
     this.queue.push(item);
@@ -36,19 +48,35 @@ class AsyncQueue<T> {
     }
   }
 
+  /** Start periodic heartbeat pushes so SSE connection stays alive. */
+  startHeartbeat(): void {
+    if (this.heartbeatTimer) return;
+    this.heartbeatTimer = setInterval(() => {
+      this.push(HEARTBEAT_ITEM as unknown as T);
+    }, HEARTBEAT_INTERVAL_MS);
+  }
+
+  stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
   async *[Symbol.asyncIterator](): AsyncGenerator<T> {
     while (true) {
       while (this.queue.length > 0) {
         yield this.queue.shift()!;
       }
-      // Wait for new items or timeout (heartbeat)
-      await new Promise<void>((resolve) => {
-        const timer = setTimeout(resolve, 30000);
+      // Wait for next push or idle timeout
+      const timedOut = await new Promise<boolean>((resolve) => {
+        const timer = setTimeout(() => resolve(true), IDLE_TIMEOUT_MS);
         this.resolve = () => {
           clearTimeout(timer);
-          resolve();
+          resolve(false);
         };
       });
+      if (timedOut) break; // idle timeout — stop iteration
     }
   }
 }
@@ -150,7 +178,8 @@ IMPORTANT: To read uploaded files, use the read tool with the FULL absolute path
 ${message}`;
   }
 
-  // 7. Start agent (non-blocking — pushes events to queue)
+  // 7. Start heartbeat and agent (non-blocking — pushes events to queue)
+  queue.startHeartbeat();
   const agentPromise = runTestAgent({
     query: agentQuery,
     workspace: workspace.getScratchDir(conversationId),
@@ -201,6 +230,12 @@ ${message}`;
     for await (const event of queue) {
       if (event === null) break;
 
+      // Forward heartbeat as-is so SSE connection stays alive; skip persistence
+      if ((event as Record<string, unknown>).type === 'heartbeat') {
+        yield event;
+        continue;
+      }
+
       // Collect for persistence
       collectForPersistence(event, assistantContent, assistantEvents);
 
@@ -223,6 +258,7 @@ ${message}`;
       timestamp: new Date().toISOString(),
     };
   } finally {
+    queue.stopHeartbeat();
     activeAbortControllers.delete(replyId);
   }
 }
