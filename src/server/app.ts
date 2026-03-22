@@ -12,6 +12,7 @@ import { registerMockRoutes } from './modules/mock/mock.routes.js';
 import { registerTestCaseRoutes } from './modules/testcase/testcase.routes.js';
 import { registerReportRoutes } from './modules/report/report.routes.js';
 import { registerDefectRoutes } from './modules/defect/defect.routes.js';
+import { registerKnowledgeRoutes } from './modules/knowledge/knowledge.routes.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
   const logger = getLogger();
@@ -54,6 +55,7 @@ export async function buildApp(): Promise<FastifyInstance> {
   await registerTestCaseRoutes(app);
   await registerReportRoutes(app);
   await registerDefectRoutes(app);
+  await registerKnowledgeRoutes(app);
 
   logger.info('Fastify app built successfully');
 

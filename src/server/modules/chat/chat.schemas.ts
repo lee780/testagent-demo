@@ -7,6 +7,7 @@ export const chatMessageSchema = z.object({
   message: z.string().min(1, '消息不能为空'),
   conversation_id: z.string().nullable().optional(),
   mode: z.enum(TEST_MODES).optional(),
+  modelId: z.string().optional(),  // 绑定知识库的被测模型 ID
 });
 
 export const interruptSchema = z.object({

@@ -4,7 +4,7 @@
     <div class="tc-header">
       <h1 class="page-title">用例库</h1>
       <div style="display: flex; gap: 8px;">
-        <button class="btn-secondary" @click="showRecommend = !showRecommend">🤖 AI 推荐回归用例</button>
+        <button class="btn-secondary" @click="showRecommend = !showRecommend" title="基于大模型语义理解，输入变更描述后自动从基线用例库中找出最相关的用例，用于精准回归验证">🤖 AI 推荐回归用例</button>
         <button class="btn-primary" @click="showCreateDialog = true">+ 新建用例</button>
       </div>
     </div>
@@ -22,6 +22,10 @@
       <div class="recommend-header">
         <h3 class="recommend-title">🤖 AI 推荐回归用例</h3>
         <button class="btn-close" @click="showRecommend = false">✕</button>
+      </div>
+      <div class="recommend-how">
+        <span class="recommend-how-icon">✦</span>
+        <span>大模型语义推荐，而非关键字检索 —— 综合分析<strong>变更描述语义</strong>、用例的<strong>覆盖点</strong>、<strong>来源对话</strong>及<strong>历史报告</strong>等多维关联数据，理解"影响了哪些业务场景"，再从基线用例库中找出最相关的回归候选用例，并给出推荐理由。</span>
       </div>
       <div class="recommend-input-row">
         <textarea v-model="recommendDesc" class="recommend-textarea" rows="2" placeholder="描述本次变更内容，例如：修改了用户等级3的授信额度计算系数..."></textarea>
@@ -42,7 +46,7 @@
             <span class="recommend-score" :style="{ color: scoreColor(r.score) }">{{ r.score }}%</span>
             <div>
               <div class="recommend-item-title">{{ r.testCase.title }}</div>
-              <div class="recommend-item-reason">{{ r.reason }}</div>
+              <div class="recommend-item-reason"><span class="reason-label">推荐理由：</span>{{ r.reason }}</div>
             </div>
           </div>
           <span class="recommend-item-code">{{ r.testCase.group?.caseCode }}</span>
@@ -403,7 +407,11 @@ onMounted(() => { loadStats(); loadCases() })
 .recommend-item-left { display: flex; align-items: flex-start; gap: 12px; }
 .recommend-score { font-size: 18px; font-weight: 700; min-width: 44px; }
 .recommend-item-title { font-size: 14px; font-weight: 500; }
-.recommend-item-reason { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.recommend-item-reason { font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5; }
+.reason-label { color: #5b9bd5; font-weight: 500; margin-right: 2px; }
+.recommend-how { display: flex; align-items: flex-start; gap: 8px; background: linear-gradient(135deg, rgba(91,155,213,0.08), rgba(91,155,213,0.04)); border: 1px solid rgba(91,155,213,0.25); border-radius: 6px; padding: 9px 13px; margin-bottom: 12px; font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+.recommend-how strong { color: var(--text-primary); }
+.recommend-how-icon { color: #5b9bd5; font-size: 14px; flex-shrink: 0; margin-top: 1px; }
 .recommend-item-code { font-size: 12px; font-family: monospace; color: var(--text-secondary); }
 .recommend-empty { text-align: center; color: var(--text-secondary); padding: 20px; font-size: 14px; }
 </style>

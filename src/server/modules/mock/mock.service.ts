@@ -10,14 +10,15 @@ export interface ScoreResult {
 export async function calculateCreditScore(userId: string): Promise<ScoreResult> {
   const db = getPrisma();
 
-  const [userInfo, accountBalance, socialSecurity, salarySummary] = await Promise.all([
+  const [userInfo, accountBalance, socialSecurity, salarySummary, externalInd] = await Promise.all([
     db.mockUserInfo.findUnique({ where: { userId } }),
     db.mockAccountBalance.findUnique({ where: { userId } }),
     db.mockSocialSecurity.findUnique({ where: { userId } }),
     db.mockSalarySummary.findUnique({ where: { userId } }),
+    db.mockExternalIndicator.findUnique({ where: { userId } }),
   ]);
 
-  if (!userInfo || !accountBalance || !socialSecurity || !salarySummary) {
+  if (!userInfo || !accountBalance || !socialSecurity || !salarySummary || !externalInd) {
     return {
       resultCode: '0001',
       resultMsg: '用户数据不存在',
@@ -31,20 +32,24 @@ export async function calculateCreditScore(userId: string): Promise<ScoreResult>
   const socialSecurityFlag = socialSecurity.socialSecurityFlag;
   const monthlySalary = Number(salarySummary.monthlySalary);
 
-  // 准入判断：工资 > 10000 且 有社保
-  const admitted = monthlySalary > 10000 && socialSecurityFlag === 1;
+  // 准入判断（v2.0）：6条全满足才准入
+  const admitted =
+    monthlySalary > 10000 &&
+    socialSecurityFlag === 1 &&
+    externalInd.cardStatus === 'NORMAL' &&
+    externalInd.idCheckResult === 'PASS' &&
+    externalInd.isBlack === false &&
+    Number(externalInd.recentTransAmount) > 0;
 
   if (!admitted) {
     return { resultCode: '0000', resultMsg: 'success', admitFlag: '0', creditLimit: '0.00' };
   }
 
-  // 系数取值
-  const coefficient = avg3mBalance > 0 ? 2.3 : 0.5;
+  // 系数取值（v2.0）：3档
+  const coefficient = avg3mBalance > 1000 ? 2.3 : avg3mBalance > 0 ? 0.5 : 0.2;
 
-  // 额度计算，负数归零
-  // 注：avg_3m_balance 存储单位为元，公式按千元计算，故除以 1000
-  // 验证依据：user_level(3) × avg(5000)/1000 × salary(15000) × coeff(2.3) = 517500.00
-  let creditLimit = userLevel * (avg3mBalance / 1000) * monthlySalary * coefficient;
+  // 额度计算（v2.0）：去掉 ÷1000，负数归零
+  let creditLimit = userLevel * avg3mBalance * monthlySalary * coefficient;
   if (creditLimit < 0) creditLimit = 0;
 
   return {

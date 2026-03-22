@@ -23,14 +23,24 @@
             <span class="conv-title">{{ row.conversation?.title || row.conversationId }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="执行模式" width="110">
+        <el-table-column width="110">
+          <template #header>
+            <el-tooltip content="系统化：BVA边界值全量覆盖 | 回归：基于基线用例精准验证 | 探索：LLM自由假设挖掘非常规缺陷 | 混沌：双系统对比差异" placement="top">
+              <span>执行模式 <span class="col-hint">ⓘ</span></span>
+            </el-tooltip>
+          </template>
           <template #default="{ row }">
             <el-tag :type="modeTagType(row.executionMode)" size="small">
               {{ modeLabel(row.executionMode) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="通过率" width="110">
+        <el-table-column width="110">
+          <template #header>
+            <el-tooltip content="绿色=100% | 蓝色≥80% | 橙色≥60% | 红色<60%" placement="top">
+              <span>通过率 <span class="col-hint">ⓘ</span></span>
+            </el-tooltip>
+          </template>
           <template #default="{ row }">
             <span v-if="row.stats?.total" :class="passRateClass(row.stats.passRate)">
               {{ row.stats.passRate }}
@@ -47,7 +57,12 @@
             <span v-else class="no-stat">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="入库" width="80">
+        <el-table-column width="80">
+          <template #header>
+            <el-tooltip content="将本次执行的测试用例以「草稿」状态写入用例库，经审核后可晋级为基线用例，供后续 AI 回归推荐使用" placement="top">
+              <span>入库 <span class="col-hint">ⓘ</span></span>
+            </el-tooltip>
+          </template>
           <template #default="{ row }">
             <el-tag :type="row.casesImported ? 'success' : 'info'" size="small">
               {{ row.casesImported ? '已入库' : '未入库' }}
@@ -262,6 +277,7 @@ onMounted(fetchReports)
 .op-link:hover { text-decoration: underline; }
 
 .list-meta { font-size: 13px; color: var(--text-secondary); }
+.col-hint { font-size: 11px; color: #aaa; cursor: help; }
 
 .pagination-bar { display: flex; align-items: center; gap: 12px; justify-content: center; padding: 16px 0 4px; }
 .page-info { font-size: 13px; color: var(--text-secondary); }

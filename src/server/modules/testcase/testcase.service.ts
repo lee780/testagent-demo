@@ -346,16 +346,21 @@ score 为 0-100 的整数，reason 需说明推荐依据（可引用关联的报
       body: JSON.stringify({
         model: config.llm.modelName,
         messages: [{ role: 'user', content: prompt }],
-        max_tokens: 1000,
+        max_tokens: 2000,
         stream: false,
+        enable_thinking: false, // 禁用推理链，加快响应速度
       }),
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(60000),
     });
     if (response.ok) {
       const data = await response.json() as { choices: Array<{ message: { content: string } }> };
       raw = data.choices[0]?.message?.content ?? '[]';
+    } else {
+      const errText = await response.text().catch(() => '');
+      console.error(`[Recommend] LLM HTTP ${response.status}: ${errText.slice(0, 200)}`);
     }
-  } catch {
+  } catch (err: any) {
+    console.error('[Recommend] LLM 调用失败:', err?.message ?? err);
     // LLM unreachable — fall back to returning all baseline cases sorted by title
     return baselineCases.slice(0, limit).map(tc => ({
       testCase: tc,

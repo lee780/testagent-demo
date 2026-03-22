@@ -64,6 +64,7 @@ export async function registerChatRoutes(app: FastifyInstance): Promise<void> {
         conversationId,
         uploadedFiles,
         mode: body.mode,
+        modelId: body.modelId,
       });
 
       await streamSSE(reply, generator);

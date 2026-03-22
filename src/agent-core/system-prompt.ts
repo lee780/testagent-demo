@@ -33,8 +33,9 @@ export function buildSystemPrompt(params: SystemPromptParams): string {
   }
 
   const parts = [modePrompt, OUTPUT_SPEC_SECTION];
+
   if (params.customInstructions) {
-    parts.push(`\n## Custom Instructions\n${params.customInstructions}`);
+    parts.push(`\n## 【团队测试规范】\n${params.customInstructions}`);
   }
   return parts.join('\n');
 }
@@ -82,7 +83,26 @@ You MUST call report_progress at each major step boundary so the user can track 
 - 老系统（稳定版）: POST http://localhost:8000/mock/model/score
 - 新系统（重构版，含缺陷）: POST http://localhost:8001/mock/model/score
 - Content-Type: application/xml
-- Response: XML with <result_code>, <result_msg>, <admit_flag>, <credit_limit>`;
+- Response: XML with <result_code>, <result_msg>, <admit_flag>, <credit_limit>
+
+## MODEL_001 业务规则摘要（v2.0）
+**准入（6条全满足）**：monthly_salary > 10000 AND social_security_flag = 1 AND card_status = "NORMAL" AND id_check_result = "PASS" AND is_black = false AND recent_trans_amount > 0
+**系数（3档）**：avg_3m_balance > 1000 → 2.3；0 < avg ≤ 1000 → 0.5；avg ≤ 0 → 0.2
+**公式**：credit_limit = user_level × avg_3m_balance × monthly_salary × coefficient（负数归零）
+**YAML preconditions 格式**：
+\`\`\`yaml
+preconditions:
+  db_setup:
+    user_info: { user_id: "TC_S01", user_level: 2 }
+    account_balance: { user_id: "TC_S01", avg_3m_balance: 1500.00 }
+    cgs_social_security: { user_id: "TC_S01", social_security_flag: 1 }
+    salary_summary: { user_id: "TC_S01", monthly_salary: 15000.00 }
+  external_setup:               # 外部接口挡板（必填）
+    card_status: "NORMAL"
+    recent_trans_amount: 5800.50
+    id_check_result: "PASS"
+    is_black: false
+\`\`\``;
 
 // ── 🔒 回归模式 ───────────────────────────────────────────
 
@@ -278,7 +298,8 @@ Document not just pass/fail but:
 - Precision traps: balance = 0.001 (rounds to 0 or treated as positive?)
 - Combination bombs: all factors at their minimum simultaneously
 - Boundary collisions: multiple rules activate at exact same input value
-- Negative+coefficient: negative balance × coefficient calculation
+- 3-tier coefficient boundaries: avg = 1000 (→0.5), avg = 1001 (→2.3), avg = 0 (→0.2), avg = -0.01 (→0.2)
+- External indicator combos: only one of 4 external fields fails — which one?
 - User level edge: level=1 vs level=5, does multiplier scale correctly?
 
 ## Constraints (minimal by design)
@@ -375,3 +396,4 @@ When generating test cases, specifically include:
 ${workspace}
 ${TOOLS_SECTION}`;
 }
+

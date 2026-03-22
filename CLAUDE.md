@@ -46,6 +46,7 @@ TestAgent-PI-main/
 │   │   │   ├── mock/        # Mock 业务系统（被测对象）
 │   │   │   ├── report/      # 测试报告 CRUD、用例入库
 │   │   │   ├── defect/      # 缺陷 CRUD、状态流转、评论
+│   │   │   ├── knowledge/   # 知识库 CRUD（业务规则/挡板场景/测试规范/覆盖点/数据模板）
 │   │   │   └── plan/        # 执行计划管理
 │   │   └── plugins/         # CORS、限流、错误处理、认证中间件
 │   ├── agent-core/          # AI Agent 核心
@@ -64,6 +65,7 @@ TestAgent-PI-main/
 │       ├── views/           # ChatView、TestCasesView、TestCaseDetailView
 │       │                    # ReportsView、ReportDetailView
 │       │                    # DefectsView、DefectDetailView
+│       │                    # KnowledgeBaseView（5 Tab 知识库管理）
 │       ├── components/      # FileDownloadPanel、ToolCallCard、MarkdownViewer 等
 │       └── api/             # Axios HTTP 客户端
 ├── prisma/                  # 数据库 Schema（PostgreSQL）
@@ -213,6 +215,37 @@ AGENT_OUTPUT_DIR=.testagent/workspace/outputs
 | GET | `/api/defects/:id` | 缺陷详情（含评论） |
 | PATCH | `/api/defects/:id/status` | 更新缺陷状态（待处理/处理中/已解决/已关闭/不修复） |
 | POST | `/api/defects/:id/comments` | 添加评论 |
+| GET | `/api/knowledge/docs` | 业务规则库列表（支持 modelId 过滤） |
+| POST | `/api/knowledge/docs` | 新增业务规则文档 |
+| PUT | `/api/knowledge/docs/:id` | 更新文档 |
+| PATCH | `/api/knowledge/docs/:id/toggle` | 启用/停用文档 |
+| DELETE | `/api/knowledge/docs/:id` | 删除文档 |
+| GET | `/api/knowledge/scenes` | 挡板场景库列表 |
+| POST | `/api/knowledge/scenes` | 新增命名挡板场景 |
+| PUT | `/api/knowledge/scenes/:id` | 更新场景 |
+| DELETE | `/api/knowledge/scenes/:id` | 删除场景 |
+| GET | `/api/knowledge/specs` | 测试规范库列表（支持 modelId/mode 过滤） |
+| POST | `/api/knowledge/specs` | 新增测试规范 |
+| PUT | `/api/knowledge/specs/:id` | 更新规范 |
+| DELETE | `/api/knowledge/specs/:id` | 删除规范 |
+| GET | `/api/knowledge/coverage-tags` | 覆盖点标签列表（必须传 modelId） |
+| POST | `/api/knowledge/coverage-tags/batch` | 批量替换覆盖点标签 |
+| DELETE | `/api/knowledge/coverage-tags/:id` | 删除标签 |
+| GET | `/api/knowledge/data-templates` | 测试数据模板列表（必须传 modelId） |
+| POST | `/api/knowledge/data-templates` | 新增数据模板 |
+| PUT | `/api/knowledge/data-templates/:id` | 更新模板 |
+| DELETE | `/api/knowledge/data-templates/:id` | 删除模板 |
+
+---
+
+## 知识库注入机制
+
+对话发送时携带 `modelId` 字段，系统自动加载对应知识库并注入 Agent 上下文：
+- **业务规则库** → 注入 `[SYSTEM CONTEXT]` 块（用户消息中）
+- **测试规范库** → 注入系统提示词 `## 【团队测试规范】` 段落
+- **覆盖点分类树** → 注入系统提示词（格式化为 category/label 树）
+- **测试数据模板** → 注入系统提示词（格式化为字段边界值表）
+- **挡板场景库** → 测试执行时，`external_setup_ref: "场景名"` 自动从 DB 查找并应用
 
 ---
 
@@ -240,7 +273,9 @@ model Message {
 测试报告表：`TestReport`（name, conversationId, htmlFile, testCasesData, casesImported）
 缺陷表：`Defect`（title, status, severity, reportId?, testCaseId?）+ `DefectComment`
 
-Mock 业务表（被测系统数据）：`MockUserInfo`、`MockAccountBalance`、`MockSocialSecurity`、`MockSalarySummary`
+Mock 业务表（被测系统数据）：`MockUserInfo`、`MockAccountBalance`、`MockSocialSecurity`、`MockSalarySummary`、`MockExternalIndicator`（v2.0新增，外部接口挡板）
+
+知识库表：`KnowledgeDoc`、`MockScene`、`TestSpec`、`CoverageTag`、`TestDataTemplate`（v2.5新增，知识库模块）
 
 ---
 

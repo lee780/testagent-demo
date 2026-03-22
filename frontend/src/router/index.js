@@ -65,6 +65,18 @@ const router = createRouter({
       component: () => import('../views/DefectDetailView.vue'),
       meta: { requiresAuth: true }
     },
+    {
+      path: '/knowledge',
+      name: 'knowledge',
+      component: () => import('../views/KnowledgeBaseView.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/user-story',
+      name: 'user-story',
+      component: () => import('../views/UserStoryView.vue'),
+      meta: { requiresAuth: true }
+    },
   ]
 })
 

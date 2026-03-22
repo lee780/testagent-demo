@@ -11,26 +11,36 @@
         <div class="stat-value">{{ stats.total || 0 }}</div>
         <div class="stat-label">总缺陷</div>
       </div>
-      <div class="stat-card danger">
-        <div class="stat-value">{{ stats['status_待处理'] || 0 }}</div>
-        <div class="stat-label">待处理</div>
-      </div>
-      <div class="stat-card warning">
-        <div class="stat-value">{{ stats['status_处理中'] || 0 }}</div>
-        <div class="stat-label">处理中</div>
-      </div>
-      <div class="stat-card success">
-        <div class="stat-value">{{ (stats['status_已解决'] || 0) + (stats['status_已关闭'] || 0) }}</div>
-        <div class="stat-label">已解决/关闭</div>
-      </div>
-      <div class="stat-card p0">
-        <div class="stat-value">{{ stats['severity_P0'] || 0 }}</div>
-        <div class="stat-label">P0</div>
-      </div>
-      <div class="stat-card p1">
-        <div class="stat-value">{{ stats['severity_P1'] || 0 }}</div>
-        <div class="stat-label">P1</div>
-      </div>
+      <el-tooltip content="尚未分配处理人，需要及时跟进" placement="top">
+        <div class="stat-card danger">
+          <div class="stat-value">{{ stats['status_待处理'] || 0 }}</div>
+          <div class="stat-label">待处理</div>
+        </div>
+      </el-tooltip>
+      <el-tooltip content="已分配处理人，正在修复中" placement="top">
+        <div class="stat-card warning">
+          <div class="stat-value">{{ stats['status_处理中'] || 0 }}</div>
+          <div class="stat-label">处理中</div>
+        </div>
+      </el-tooltip>
+      <el-tooltip content="已解决或已关闭的缺陷数量" placement="top">
+        <div class="stat-card success">
+          <div class="stat-value">{{ (stats['status_已解决'] || 0) + (stats['status_已关闭'] || 0) }}</div>
+          <div class="stat-label">已解决/关闭</div>
+        </div>
+      </el-tooltip>
+      <el-tooltip content="P0：系统崩溃/数据错误，须立即处理" placement="top">
+        <div class="stat-card p0">
+          <div class="stat-value">{{ stats['severity_P0'] || 0 }}</div>
+          <div class="stat-label">P0 紧急</div>
+        </div>
+      </el-tooltip>
+      <el-tooltip content="P1：核心功能受损，须当天处理" placement="top">
+        <div class="stat-card p1">
+          <div class="stat-value">{{ stats['severity_P1'] || 0 }}</div>
+          <div class="stat-label">P1 高危</div>
+        </div>
+      </el-tooltip>
     </div>
 
     <!-- 筛选栏 -->
@@ -56,7 +66,12 @@
             <el-tag :type="statusType(row.status)" size="small">{{ row.status }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="级别" width="72">
+        <el-table-column width="72">
+          <template #header>
+            <el-tooltip content="P0 崩溃/数据错误 | P1 核心功能受损 | P2 一般功能问题 | P3 体验问题/优化" placement="top">
+              <span>级别 <span class="col-hint">ⓘ</span></span>
+            </el-tooltip>
+          </template>
           <template #default="{ row }">
             <el-tag :type="severityType(row.severity)" size="small">{{ row.severity }}</el-tag>
           </template>
@@ -244,4 +259,6 @@ onMounted(() => { fetchDefects(); fetchStats() })
 
 .pagination-bar { display: flex; align-items: center; gap: 12px; justify-content: center; padding: 16px 0 4px; }
 .page-info { font-size: 13px; color: var(--text-secondary); }
+.col-hint { font-size: 11px; color: #aaa; cursor: help; }
+.stat-card { cursor: default; }
 </style>

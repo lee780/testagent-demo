@@ -107,6 +107,12 @@
                   {{ m.icon }} {{ m.label }}
                 </button>
               </div>
+              <input
+                v-model="currentModelId"
+                class="model-id-input"
+                placeholder="知识库 Model ID（选填）"
+                title="填写后自动注入对应模型的业务规则、测试规范等知识库内容"
+              />
               <div class="spacer"></div>
               <button
                 class="action-btn send-btn"
@@ -406,6 +412,9 @@ const currentMode = computed({
   get: () => getConversationMode(currentConversationId.value),
   set: (val) => setConversationMode(currentConversationId.value, val)
 })
+
+// 绑定知识库的模型 ID（可选，用户填写后自动注入知识库上下文）
+const currentModelId = ref('')
 const testModes = [
   {
     value: 'regression',
@@ -675,6 +684,7 @@ const sendMessage = async () => {
         message: finalMessage,
         conversation_id: currentConversationId.value || undefined,
         mode: currentMode.value,
+        modelId: currentModelId.value || undefined,
       })
     })
 
@@ -1547,6 +1557,22 @@ onMounted(async () => {
 .mode-btn.active {
   font-weight: 600;
 }
+
+/* 知识库模型 ID 输入框 */
+.model-id-input {
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--input-bg, var(--bg-secondary));
+  color: var(--text-primary);
+  font-size: 12px;
+  width: 160px;
+  outline: none;
+  transition: border-color 0.18s;
+}
+.model-id-input:focus { border-color: var(--primary-color, #409eff); }
+.model-id-input::placeholder { color: var(--text-muted, #aaa); }
 
 /* 终止按钮样式 */
 .stop-btn {

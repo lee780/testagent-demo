@@ -50,7 +50,7 @@ export interface RunTestAgentParams {
   mode?: TestMode;
   /** Uploaded input file names (business rule docs) for this conversation. */
   uploadedFiles?: string[];
-  /** Custom instructions to append to system prompt. */
+  /** Custom instructions to append to system prompt (from TestSpec knowledge base). */
   customInstructions?: string;
   /** SSE event callback. */
   onEvent: (event: SSEEvent) => void;
@@ -153,7 +153,7 @@ async function runWithPiMono(
   bridge: ReturnType<typeof createEventBridge>,
 ): Promise<RunTestAgentResult> {
   // Dynamic import of pi-mono packages
-  const { createAgentSession } = await import("@mariozechner/pi-coding-agent");
+  const { createAgentSession, DefaultResourceLoader } = await import("@mariozechner/pi-coding-agent");
   const { getModel } = await import("@mariozechner/pi-ai");
   const { SessionManager } = await import("@mariozechner/pi-coding-agent");
 
@@ -202,15 +202,19 @@ async function runWithPiMono(
     ? SessionManager.open(params.sessionFile)
     : undefined;
 
-  // Create AgentSession
-  // `tools` defaults to codingTools (read, bash, edit, write) if omitted.
-  // `customTools` adds our business tools on top.
+  // Create AgentSession — inject our system prompt via resourceLoader
+  const resourceLoader = new DefaultResourceLoader({
+    cwd: params.workspace,
+    systemPrompt,
+  });
+
   const { session } = await createAgentSession({
     cwd: params.workspace,
     model,
     thinkingLevel: params.thinkingLevel ?? "off",
     customTools: customTools as any, // AgentToolDef is compatible with ToolDefinition
     sessionManager,
+    resourceLoader,
   });
 
   // Subscribe to events

@@ -17,6 +17,7 @@ import {
   updateConversationTitleInternal,
 } from '../conversation/conversation.service.js';
 import { generateTitle } from '../../llm/title-generator.js';
+import { loadKnowledgeContext } from '../knowledge/knowledge.service.js';
 
 // ── Active agent runs (for interrupt support) ──────────────
 
@@ -119,12 +120,13 @@ export interface SSEStreamOptions {
   conversationId?: string | null;
   uploadedFiles?: string[];
   mode?: 'regression' | 'systematic' | 'exploratory' | 'chaos';
+  modelId?: string;   // 绑定知识库的被测模型 ID（如 "MODEL_001"）
 }
 
 export async function* sendMessageStreaming(
   options: SSEStreamOptions
 ): AsyncGenerator<Record<string, unknown>> {
-  const { message, userId, uploadedFiles, mode } = options;
+  const { message, userId, uploadedFiles, mode, modelId } = options;
   let { conversationId } = options;
   const logger = getLogger();
   const config = getConfig();
@@ -169,22 +171,39 @@ export async function* sendMessageStreaming(
   const abortController = new AbortController();
   activeAbortControllers.set(replyId, abortController);
 
-  // Build query with file context if needed
+  // 5.5. 从知识库加载上下文（如果传入了 modelId）
+  let knowledgeCtx: Awaited<ReturnType<typeof loadKnowledgeContext>> | null = null;
+  if (modelId) {
+    try {
+      knowledgeCtx = await loadKnowledgeContext(modelId, mode);
+    } catch (err) {
+      logger.warn({ err, modelId }, '[Chat] 知识库加载失败，忽略继续');
+    }
+  }
+
+  // Build query with file context and knowledge base context
   let agentQuery = message;
-  if (uploadedFiles && uploadedFiles.length > 0) {
-    // Use absolute path so agent can find files regardless of its cwd
-    const fileStoragePath = resolve(config.storage.root, 'chat', userId, conversationId);
-    agentQuery = `[SYSTEM CONTEXT]
-user_id: ${userId}
-conversation_id: ${conversationId}
-file_storage_path: ${fileStoragePath}
-uploaded_files:
-${uploadedFiles.map(f => `  - ${fileStoragePath}/${f}`).join('\n')}
+  const hasFiles = uploadedFiles && uploadedFiles.length > 0;
+  const hasKnowledge = knowledgeCtx && knowledgeCtx.businessRulesMd;
 
-IMPORTANT: To read uploaded files, use the read tool with the FULL absolute paths listed above.
-[/SYSTEM CONTEXT]
+  if (hasFiles || hasKnowledge) {
+    const contextParts: string[] = [];
+    contextParts.push(`user_id: ${userId}`);
+    contextParts.push(`conversation_id: ${conversationId}`);
 
-${message}`;
+    if (hasFiles) {
+      const fileStoragePath = resolve(config.storage.root, 'chat', userId, conversationId!);
+      contextParts.push(`file_storage_path: ${fileStoragePath}`);
+      contextParts.push(`uploaded_files:\n${uploadedFiles!.map(f => `  - ${fileStoragePath}/${f}`).join('\n')}`);
+      contextParts.push(`IMPORTANT: To read uploaded files, use the read tool with the FULL absolute paths listed above.`);
+    }
+
+    if (knowledgeCtx?.businessRulesMd) {
+      contextParts.push(`knowledge_model_id: ${modelId}`);
+      contextParts.push(`knowledge_business_rules:\n${knowledgeCtx.businessRulesMd}`);
+    }
+
+    agentQuery = `[SYSTEM CONTEXT]\n${contextParts.join('\n')}\n[/SYSTEM CONTEXT]\n\n${message}`;
   }
 
   // 7. Start heartbeat and agent (non-blocking — pushes events to queue)
@@ -202,6 +221,7 @@ ${message}`;
     outputDir: config.agentOutputDir,
     mode,
     uploadedFiles: uploadedFiles && uploadedFiles.length > 0 ? uploadedFiles : undefined,
+    customInstructions: knowledgeCtx?.customInstructions ?? undefined,
     onEvent: (event) => {
       // event is SSEEvent { type, data } from the bridge.
       // Map bridge types → frontend types that ChatView.vue expects.

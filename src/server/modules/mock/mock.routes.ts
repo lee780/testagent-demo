@@ -68,7 +68,7 @@ export async function registerMockRoutes(app: FastifyInstance): Promise<void> {
     const logger = getLogger();
     const body = request.body as any;
     
-    const { userId, userLevel, avg3mBalance, socialSecurityFlag, monthlySalary } = body;
+    const { userId, userLevel, avg3mBalance, socialSecurityFlag, monthlySalary, external_setup } = body;
 
     if (!userId) {
       return reply.status(400).send({ success: false, error: 'userId is required' });
@@ -77,8 +77,7 @@ export async function registerMockRoutes(app: FastifyInstance): Promise<void> {
     try {
       const db = getPrisma();
 
-      // 使用 upsert 确保四条记录同时存在或都不存在
-      await db.$transaction([
+      const ops: any[] = [
         db.mockUserInfo.upsert({
           where: { userId },
           update: { userLevel: Number(userLevel) },
@@ -99,9 +98,30 @@ export async function registerMockRoutes(app: FastifyInstance): Promise<void> {
           update: { monthlySalary: String(monthlySalary) },
           create: { userId, monthlySalary: String(monthlySalary) },
         }),
-      ]);
+      ];
 
-      logger.info({ userId, userLevel, avg3mBalance, socialSecurityFlag, monthlySalary }, '[Mock] 数据设置完成');
+      if (external_setup) {
+        ops.push(db.mockExternalIndicator.upsert({
+          where: { userId },
+          update: {
+            cardStatus: String(external_setup.card_status ?? 'NORMAL'),
+            recentTransAmount: String(external_setup.recent_trans_amount ?? 0),
+            idCheckResult: String(external_setup.id_check_result ?? 'PASS'),
+            isBlack: Boolean(external_setup.is_black ?? false),
+          },
+          create: {
+            userId,
+            cardStatus: String(external_setup.card_status ?? 'NORMAL'),
+            recentTransAmount: String(external_setup.recent_trans_amount ?? 0),
+            idCheckResult: String(external_setup.id_check_result ?? 'PASS'),
+            isBlack: Boolean(external_setup.is_black ?? false),
+          },
+        }));
+      }
+
+      await db.$transaction(ops);
+
+      logger.info({ userId, userLevel, avg3mBalance, socialSecurityFlag, monthlySalary, hasExternal: !!external_setup }, '[Mock] 数据设置完成');
 
       return reply.send({ success: true, userId, message: 'Test data configured successfully' });
     } catch (error: any) {

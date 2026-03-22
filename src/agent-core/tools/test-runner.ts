@@ -89,6 +89,26 @@ interface DbSetup {
   salary_summary?: { user_id: string; monthly_salary: number };
 }
 
+async function setupExternal(userId: string, ext: Record<string, unknown>): Promise<void> {
+  const prisma = getPrisma();
+  await prisma.mockExternalIndicator.upsert({
+    where: { userId },
+    update: {
+      cardStatus: String(ext.card_status ?? 'NORMAL'),
+      recentTransAmount: String(ext.recent_trans_amount ?? 0),
+      idCheckResult: String(ext.id_check_result ?? 'PASS'),
+      isBlack: Boolean(ext.is_black ?? false),
+    },
+    create: {
+      userId,
+      cardStatus: String(ext.card_status ?? 'NORMAL'),
+      recentTransAmount: String(ext.recent_trans_amount ?? 0),
+      idCheckResult: String(ext.id_check_result ?? 'PASS'),
+      isBlack: Boolean(ext.is_black ?? false),
+    },
+  });
+}
+
 async function setupDb(db: DbSetup): Promise<void> {
   const prisma = getPrisma();
 
@@ -190,12 +210,32 @@ async function runOneCase(tc: any, baseUrl: string, suite: SuiteConfig): Promise
     const dbSetup: DbSetup = tc.preconditions?.db_setup ?? {};
     await setupDb(dbSetup);
 
+    // 1b. External indicator setup（支持命名场景引用 + 直接定义两种方式）
+    const sceneRef: string | undefined = tc.preconditions?.external_setup_ref;
+    let externalSetup: Record<string, unknown> = { ...(tc.preconditions?.external_setup ?? {}) };
+    if (sceneRef) {
+      const { getPrisma } = await import('../../server/config/database.js');
+      const scene = await getPrisma().mockScene.findUnique({ where: { name: sceneRef } });
+      if (!scene) throw new Error(`挡板场景 "${sceneRef}" 不存在，请先在知识库中创建`);
+      // scene.setupData 作为基础，external_setup 中的字段优先覆盖
+      externalSetup = { ...(scene.setupData as Record<string, unknown>), ...externalSetup };
+    }
+    if (Object.keys(externalSetup).length > 0 && dbSetup.user_info?.user_id) {
+      await setupExternal(dbSetup.user_info.user_id, externalSetup);
+    }
+
     // Build human-readable DB setup summary
     const dbParts: string[] = [];
     if (dbSetup.user_info) dbParts.push(`user_level=${dbSetup.user_info.user_level}`);
     if (dbSetup.account_balance) dbParts.push(`avg_3m_balance=${dbSetup.account_balance.avg_3m_balance}`);
     if (dbSetup.cgs_social_security) dbParts.push(`social_security_flag=${dbSetup.cgs_social_security.social_security_flag}`);
     if (dbSetup.salary_summary) dbParts.push(`monthly_salary=${dbSetup.salary_summary.monthly_salary}`);
+    if (sceneRef) dbParts.push(`scene=${sceneRef}`);
+    if (Object.keys(externalSetup).length > 0) {
+      if (externalSetup.card_status !== undefined) dbParts.push(`card_status=${externalSetup.card_status}`);
+      if (externalSetup.id_check_result !== undefined) dbParts.push(`id_check=${externalSetup.id_check_result}`);
+      if (externalSetup.is_black !== undefined) dbParts.push(`is_black=${externalSetup.is_black}`);
+    }
     const db_setup_summary = dbParts.length > 0 ? dbParts.join("  |  ") : "（无预置数据）";
 
     // 2. HTTP request — endpoint/method/content-type from suite config
