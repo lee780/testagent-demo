@@ -170,6 +170,63 @@
           </el-table>
         </el-tab-pane>
 
+        <!-- Tab: 过程台账 -->
+        <el-tab-pane label="过程台账" name="ledger">
+          <div v-if="logLoading" class="loading-tip">加载中...</div>
+          <div v-else-if="processLog.length === 0" class="empty-tip">暂无执行过程记录（对话消息中未找到工具事件）</div>
+          <div v-else class="ledger-timeline">
+            <div v-for="(item, idx) in processLog" :key="idx" class="ledger-item">
+
+              <!-- 里程碑：来自 stage_update 事件 -->
+              <div v-if="item.type === 'milestone'" class="ledger-milestone" :class="`ms-${item.status}`">
+                <span class="ms-icon">{{ { started: '▶', done: '✅', failed: '❌' }[item.status] || '○' }}</span>
+                <span class="ms-stage">{{ item.stage }}</span>
+                <span class="ms-badge" :class="`msbadge-${item.status}`">{{ { started: '进行中', done: '完成', failed: '失败' }[item.status] || item.status }}</span>
+                <span v-if="item.detail" class="ms-detail">{{ item.detail }}</span>
+                <span class="ledger-basis">依据：stage_update 阶段标记</span>
+              </div>
+
+              <!-- AI 叙述：来自 chunk 文本输出 -->
+              <div v-else-if="item.type === 'narrative'" class="ledger-narrative">
+                <div class="narrative-text">{{ item.content }}</div>
+                <span class="ledger-basis">依据：AI 文本输出</span>
+              </div>
+
+              <!-- 工具调用：来自 tool_call + tool_result -->
+              <div v-else-if="item.type === 'tool'" class="ledger-tool" :class="item.success ? '' : 'tool-failed'">
+                <div class="tool-header" @click="toggleTool(idx)">
+                  <span class="tool-icon">{{ item.success ? '⚙' : '⚠' }}</span>
+                  <code class="tool-name">{{ item.name }}</code>
+                  <span class="tool-status-badge" :class="item.success ? 'tbadge-ok' : 'tbadge-fail'">{{ item.success ? 'OK' : 'FAILED' }}</span>
+                  <span class="ledger-basis">依据：工具调用 · {{ item.name }}</span>
+                  <span class="tool-toggle">{{ expandedTools.has(idx) ? '▲' : '▼' }}</span>
+                </div>
+                <div v-if="expandedTools.has(idx)" class="tool-body">
+                  <div v-if="item.input" class="tool-section">
+                    <div class="tool-section-label">输入参数</div>
+                    <pre class="tool-pre">{{ formatJson(item.input) }}</pre>
+                  </div>
+                  <div v-if="item.output" class="tool-section">
+                    <div class="tool-section-label">执行结果</div>
+                    <pre class="tool-pre">{{ truncate(formatJson(item.output), 1200) }}</pre>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 执行进度快照：来自 test_progress 事件聚合 -->
+              <div v-else-if="item.type === 'progress'" class="ledger-progress">
+                <span class="progress-icon">📊</span>
+                <span class="progress-label">执行进度快照</span>
+                <span class="progress-stat stat-total">共 {{ item.total }} 条</span>
+                <span class="progress-stat stat-pass">通过 {{ item.passed }}</span>
+                <span class="progress-stat stat-fail">失败 {{ item.failed }}</span>
+                <span class="ledger-basis">依据：test_progress 事件聚合（最终状态）</span>
+              </div>
+
+            </div>
+          </div>
+        </el-tab-pane>
+
         <!-- Tab: 关联缺陷 -->
         <el-tab-pane label="关联缺陷" name="defects">
           <div v-if="defectsLoading" class="loading-tip">加载中...</div>
@@ -343,7 +400,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -373,6 +430,12 @@ const conversationUploads = ref([])   // files uploaded to the conversation (fro
 const firstUserMessage = ref('')      // first user message text
 const metaLoading = ref(false)
 const showImportConfirm = ref(false)  // pre-import confirmation dialog
+
+// 过程台账
+const processLog = ref([])
+const logLoading = ref(false)
+const logFetched = ref(false)
+const expandedTools = ref(new Set())
 
 // ── Derived data ──────────────────────────────────────────
 
@@ -641,6 +704,115 @@ async function submitDefect() {
   finally { creatingDefect.value = false }
 }
 
+// ── 过程台账 ──────────────────────────────────────────────
+
+function toggleTool(idx) {
+  const s = new Set(expandedTools.value)
+  s.has(idx) ? s.delete(idx) : s.add(idx)
+  expandedTools.value = s
+}
+
+function formatJson(val) {
+  if (typeof val === 'string') {
+    try { return JSON.stringify(JSON.parse(val), null, 2) } catch { return val }
+  }
+  return JSON.stringify(val, null, 2)
+}
+
+function truncate(str, max) {
+  return str.length > max ? str.slice(0, max) + '\n…（内容过长，已截断）' : str
+}
+
+function buildTimeline(messages) {
+  const items = []
+  let latestProgress = null
+
+  for (const msg of messages) {
+    if (msg.role !== 'assistant') continue
+    const events = msg.metadata?.events ?? []
+    const pendingCalls = {}
+    let chunkParts = []
+
+    const flushChunk = () => {
+      const text = chunkParts.join('').trim()
+      if (text) items.push({ type: 'narrative', content: text })
+      chunkParts = []
+    }
+
+    for (const evt of events) {
+      if (evt.type === 'chunk') {
+        chunkParts.push(evt.content ?? '')
+        continue
+      }
+      flushChunk()
+
+      if (evt.type === 'stage_update') {
+        items.push({ type: 'milestone', stage: evt.stage, status: evt.status, detail: evt.detail })
+      } else if (evt.type === 'tool_call') {
+        pendingCalls[evt.id] = { name: evt.name, input: evt.input }
+      } else if (evt.type === 'tool_result') {
+        const call = pendingCalls[evt.id] ?? {}
+        const item = {
+          type: 'tool',
+          name: evt.name ?? call.name,
+          input: call.input,
+          output: evt.output,
+          success: evt.success !== false,
+        }
+        items.push(item)
+        delete pendingCalls[evt.id]
+      } else if (evt.type === 'test_progress') {
+        latestProgress = evt
+      }
+    }
+    flushChunk()
+  }
+
+  // Insert progress summary card after the last run_test_suite tool result
+  if (latestProgress) {
+    // Find last run_test_suite tool index and insert after it
+    let insertIdx = items.length
+    for (let i = items.length - 1; i >= 0; i--) {
+      if (items[i].type === 'tool' && items[i].name === 'run_test_suite') {
+        insertIdx = i + 1
+        break
+      }
+    }
+    items.splice(insertIdx, 0, {
+      type: 'progress',
+      total: latestProgress.total,
+      passed: latestProgress.passed,
+      failed: latestProgress.failed,
+    })
+  }
+
+  // Auto-expand failed tool calls
+  const autoExpand = new Set()
+  items.forEach((item, idx) => { if (item.type === 'tool' && !item.success) autoExpand.add(idx) })
+  expandedTools.value = autoExpand
+
+  return items
+}
+
+async function fetchProcessLog() {
+  if (logFetched.value) return
+  const convId = report.value?.conversationId
+  if (!convId) return
+  logLoading.value = true
+  try {
+    const res = await fetch(`/api/conversations/${convId}/messages?limit=20&offset=0`, {
+      headers: { Authorization: `Bearer ${token()}` },
+    })
+    const data = await res.json()
+    const messages = Array.isArray(data) ? data : (data.data ?? [])
+    processLog.value = buildTimeline(messages)
+    logFetched.value = true
+  } catch { /* non-fatal */ }
+  finally { logLoading.value = false }
+}
+
+watch(activeTab, (tab) => { if (tab === 'ledger') fetchProcessLog() })
+
 // Fetch uploaded files + first user message for the linked conversation
 async function fetchConversationMeta() {
   const convId = report.value?.conversationId
@@ -826,6 +998,58 @@ onMounted(async () => {
 .assert-desc { font-weight: 500; min-width: 120px; }
 .assert-detail { color: #666; font-size: 12px; }
 code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-family: monospace; font-size: 12px; }
+
+/* ── 过程台账 ─────────────────────────── */
+.ledger-timeline { display: flex; flex-direction: column; gap: 0; max-width: 800px; padding-bottom: 24px; }
+.ledger-item { position: relative; padding-left: 20px; }
+.ledger-item::before { content: ''; position: absolute; left: 7px; top: 0; bottom: 0; width: 2px; background: var(--border-color); }
+.ledger-item:last-child::before { display: none; }
+
+/* 依据标签 */
+.ledger-basis { display: inline-block; font-size: 10px; color: #aaa; border: 1px solid #e0e0e0; border-radius: 10px; padding: 1px 7px; margin-left: 10px; white-space: nowrap; vertical-align: middle; }
+
+/* 里程碑 */
+.ledger-milestone { display: flex; align-items: center; gap: 8px; padding: 10px 12px; margin: 6px 0; border-radius: 6px; font-size: 13px; font-weight: 600; background: var(--sidebar-bg); border-left: 3px solid #bbb; flex-wrap: wrap; }
+.ledger-milestone.ms-done { border-left-color: #2e7d32; }
+.ledger-milestone.ms-started { border-left-color: #1565c0; }
+.ledger-milestone.ms-failed { border-left-color: #c62828; }
+.ms-icon { font-size: 14px; }
+.ms-stage { color: var(--text-primary); }
+.ms-badge { font-size: 11px; font-weight: 400; padding: 1px 8px; border-radius: 10px; }
+.msbadge-done { background: #e8f5e9; color: #2e7d32; }
+.msbadge-started { background: #e3f2fd; color: #1565c0; }
+.msbadge-failed { background: #ffebee; color: #c62828; }
+.ms-detail { font-size: 12px; font-weight: 400; color: var(--text-secondary); }
+
+/* AI 叙述 */
+.ledger-narrative { padding: 8px 12px; margin: 4px 0; font-size: 13px; color: var(--text-secondary); line-height: 1.7; white-space: pre-wrap; border-left: 2px solid transparent; }
+.narrative-text { margin-bottom: 4px; }
+
+/* 工具调用 */
+.ledger-tool { margin: 6px 0; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; }
+.ledger-tool.tool-failed { border-color: #ffcdd2; }
+.tool-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; cursor: pointer; user-select: none; background: var(--sidebar-bg); font-size: 13px; flex-wrap: wrap; }
+.tool-header:hover { background: var(--border-color); }
+.tool-icon { font-size: 14px; }
+.tool-name { font-family: monospace; font-size: 12px; color: #555; background: #f0f0f0; padding: 1px 6px; border-radius: 4px; }
+.tool-status-badge { font-size: 11px; padding: 1px 8px; border-radius: 10px; }
+.tbadge-ok { background: #e8f5e9; color: #2e7d32; }
+.tbadge-fail { background: #ffebee; color: #c62828; }
+.tool-toggle { margin-left: auto; font-size: 10px; color: #aaa; }
+.tool-body { padding: 10px 12px; background: #fafafa; border-top: 1px solid var(--border-color); }
+.tool-section { margin-bottom: 10px; }
+.tool-section:last-child { margin-bottom: 0; }
+.tool-section-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+.tool-pre { background: #f0f1f5; border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px 10px; font-family: monospace; font-size: 11px; color: #333; white-space: pre-wrap; word-break: break-all; max-height: 220px; overflow-y: auto; margin: 0; }
+
+/* 进度快照 */
+.ledger-progress { display: flex; align-items: center; gap: 10px; padding: 8px 12px; margin: 6px 0; background: #e3f2fd; border-radius: 6px; font-size: 13px; flex-wrap: wrap; }
+.progress-icon { font-size: 14px; }
+.progress-label { font-weight: 600; color: #1565c0; }
+.progress-stat { padding: 1px 10px; border-radius: 10px; font-size: 12px; }
+.stat-total { background: #e0e0e0; color: #333; }
+.stat-pass { background: #e8f5e9; color: #2e7d32; }
+.stat-fail { background: #ffebee; color: #c62828; }
 
 /* Defect dialog exec log */
 .defect-exec-log { background: #f5f6fa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px 12px; font-family: monospace; font-size: 11px; color: #444; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; margin: 0; width: 100%; box-sizing: border-box; }
