@@ -34,13 +34,23 @@ export async function registerErrorHandler(app: FastifyInstance): Promise<void> 
       });
     }
 
-    // JWT errors from @fastify/jwt
-    if ('statusCode' in error && (error as FastifyError).statusCode === 401) {
-      return reply.status(401).send({
-        success: false,
-        error: 'UNAUTHORIZED',
-        message: error.message || 'Token无效或已过期',
-      });
+    // Fastify built-in errors with known status codes (e.g. JWT 401, empty body parse 400)
+    if ('statusCode' in error && typeof (error as FastifyError).statusCode === 'number') {
+      const statusCode = (error as FastifyError).statusCode!;
+      if (statusCode === 401) {
+        return reply.status(401).send({
+          success: false,
+          error: 'UNAUTHORIZED',
+          message: error.message || 'Token无效或已过期',
+        });
+      }
+      if (statusCode >= 400 && statusCode < 500) {
+        return reply.status(statusCode).send({
+          success: false,
+          error: (error as FastifyError).code ?? 'BAD_REQUEST',
+          message: error.message,
+        });
+      }
     }
 
     logger.error({ err: error }, 'Unhandled error');

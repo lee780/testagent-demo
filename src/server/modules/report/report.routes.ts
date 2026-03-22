@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../../plugins/auth.js';
 import * as reportService from './report.service.js';
+import { AppError } from '../../common/errors.js';
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -13,11 +14,11 @@ const createSchema = z.object({
 
 export async function registerReportRoutes(app: FastifyInstance): Promise<void> {
   // POST /api/reports — save report
-  app.post('/api/reports', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
+  app.post('/api/reports', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.currentUser!.user_id;
     const body = createSchema.parse(request.body);
     const report = await reportService.createReport({ ...body, createdBy: userId });
-    return { success: true, data: report };
+    return reply.status(201).send({ success: true, data: report });
   });
 
   // GET /api/reports — list (paginated, optional mode filter)
@@ -61,6 +62,7 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
       const result = await reportService.importTestCases(id, userId, body?.caseIds);
       return { success: true, data: result };
     } catch (err: any) {
+      if (err instanceof AppError) throw err;
       return reply.status(400).send({ success: false, error: err.message });
     }
   });
@@ -73,6 +75,7 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
       await reportService.deleteReport(id, userId);
       return { success: true };
     } catch (err: any) {
+      if (err instanceof AppError) throw err;
       return reply.status(400).send({ success: false, error: err.message });
     }
   });
@@ -86,6 +89,7 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
       const report = await reportService.updateReport(id, userId, body);
       return { success: true, data: report };
     } catch (err: any) {
+      if (err instanceof AppError) throw err;
       return reply.status(400).send({ success: false, error: err.message });
     }
   });

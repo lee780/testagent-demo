@@ -1,4 +1,5 @@
 import { getPrisma } from '../../config/database.js';
+import { NotFoundError } from '../../common/errors.js';
 
 const prisma = getPrisma();
 
@@ -77,7 +78,7 @@ export async function createDefect(input: CreateDefectInput) {
 
 export async function updateDefectStatus(id: string, userId: string, status: string) {
   const defect = await prisma.defect.findFirst({ where: { id, createdBy: userId } });
-  if (!defect) throw new Error('缺陷不存在');
+  if (!defect) throw new NotFoundError('缺陷');
 
   const resolvedAt = status === '已解决' ? new Date() : undefined;
   return prisma.defect.update({
@@ -104,7 +105,7 @@ export async function getDefectStats(userId: string) {
 
 export async function addComment(defectId: string, userId: string, content: string) {
   const defect = await prisma.defect.findFirst({ where: { id: defectId, createdBy: userId } });
-  if (!defect) throw new Error('缺陷不存在');
+  if (!defect) throw new NotFoundError('缺陷');
 
   return prisma.defectComment.create({
     data: { defectId, content, createdBy: userId },

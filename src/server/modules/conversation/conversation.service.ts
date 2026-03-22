@@ -308,7 +308,7 @@ export async function updateConversationTitleInternal(
   const prisma = getPrisma();
 
   await prisma.conversation.update({
-    where: { id: conversationId },
+    where: { id: conversationId, userId },
     data: { title },
   });
 

@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../../plugins/auth.js';
 import * as defectService from './defect.service.js';
+import { AppError } from '../../common/errors.js';
 
 const createSchema = z.object({
   title: z.string().min(1),
@@ -41,11 +42,11 @@ export async function registerDefectRoutes(app: FastifyInstance): Promise<void> 
     return { success: true, data: defects };
   });
 
-  app.post('/api/defects', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
+  app.post('/api/defects', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.currentUser!.user_id;
     const body = createSchema.parse(request.body);
     const defect = await defectService.createDefect({ ...body, createdBy: userId });
-    return { success: true, data: defect };
+    return reply.status(201).send({ success: true, data: defect });
   });
 
   app.get('/api/defects/:id', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -64,6 +65,7 @@ export async function registerDefectRoutes(app: FastifyInstance): Promise<void> 
       const defect = await defectService.updateDefectStatus(id, userId, body.status);
       return { success: true, data: defect };
     } catch (err: any) {
+      if (err instanceof AppError) throw err;
       return reply.status(400).send({ success: false, error: err.message });
     }
   });
@@ -76,6 +78,7 @@ export async function registerDefectRoutes(app: FastifyInstance): Promise<void> 
       const comment = await defectService.addComment(id, userId, body.content);
       return { success: true, data: comment };
     } catch (err: any) {
+      if (err instanceof AppError) throw err;
       return reply.status(400).send({ success: false, error: err.message });
     }
   });

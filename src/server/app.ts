@@ -27,6 +27,19 @@ export async function buildApp(): Promise<FastifyInstance> {
   await registerRateLimit(app);
   await registerAuthPlugin(app);
 
+  // Allow empty JSON body (e.g. DELETE requests sent with Content-Type: application/json)
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+    if (!body || (typeof body === 'string' && body.trim() === '')) {
+      done(null, null);
+      return;
+    }
+    try {
+      done(null, JSON.parse(body as string));
+    } catch (err) {
+      done(err as Error, undefined);
+    }
+  });
+
   // Multipart for file uploads
   await app.register(multipart, {
     limits: {

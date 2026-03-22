@@ -2,6 +2,7 @@ import { getPrisma } from '../../config/database.js';
 import { getConfig } from '../../config/index.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { NotFoundError, ConflictError } from '../../common/errors.js';
 
 const prisma = getPrisma();
 
@@ -87,7 +88,7 @@ export async function getReport(reportId: string, userId: string) {
 // Delete a report; null out reportId on related TestCases and Defects to avoid FK violation
 export async function deleteReport(reportId: string, userId: string) {
   const report = await prisma.testReport.findFirst({ where: { id: reportId, createdBy: userId } });
-  if (!report) throw new Error('Report not found');
+  if (!report) throw new NotFoundError('报告');
   await prisma.$transaction([
     prisma.testCase.updateMany({ where: { reportId }, data: { reportId: null } }),
     prisma.defect.updateMany({ where: { reportId }, data: { reportId: null } }),
@@ -98,7 +99,7 @@ export async function deleteReport(reportId: string, userId: string) {
 // Update report metadata (name, uploadedDocs)
 export async function updateReport(reportId: string, userId: string, input: { name?: string; uploadedDocs?: string[] }) {
   const report = await prisma.testReport.findFirst({ where: { id: reportId, createdBy: userId } });
-  if (!report) throw new Error('Report not found');
+  if (!report) throw new NotFoundError('报告');
   return prisma.testReport.update({
     where: { id: reportId },
     data: { ...(input.name && { name: input.name }), ...(input.uploadedDocs !== undefined && { uploadedDocs: input.uploadedDocs }) },
@@ -126,9 +127,9 @@ export async function importTestCases(reportId: string, userId: string, caseIds?
   const report = await prisma.testReport.findFirst({
     where: { id: reportId, createdBy: userId },
   });
-  if (!report) throw new Error('Report not found');
-  if (report.casesImported) throw new Error('Test cases already imported');
-  if (!report.testCasesData) throw new Error('No test case data in this report');
+  if (!report) throw new NotFoundError('报告');
+  if (report.casesImported) throw new ConflictError('测试用例已入库');
+  if (!report.testCasesData) throw new NotFoundError('报告中无用例数据');
 
   const rawCases = report.testCasesData as Array<{
     id?: string;
@@ -211,11 +212,13 @@ export async function importTestCases(reportId: string, userId: string, caseIds?
     }
   }
 
-  // Mark report as imported
-  await prisma.testReport.update({
-    where: { id: reportId },
-    data: { casesImported: true },
-  });
+  // 只有至少一条入库成功时才标记为已导入，否则保留可重试状态
+  if (created.length > 0) {
+    await prisma.testReport.update({
+      where: { id: reportId },
+      data: { casesImported: true },
+    });
+  }
 
   return { imported: created.length, ids: created, failed };
 }

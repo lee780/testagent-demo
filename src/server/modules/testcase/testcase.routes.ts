@@ -35,9 +35,14 @@ const reviewSchema = z.object({
 });
 
 export async function registerTestCaseRoutes(app: FastifyInstance): Promise<void> {
+  const validStatuses = new Set(['DRAFT', 'PENDING_REVIEW', 'APPROVED', 'BASELINE', 'DEPRECATED']);
+
   // GET /api/testcases — list
-  app.get('/api/testcases', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
+  app.get('/api/testcases', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { modelId, status, search, latestOnly, page, pageSize } = request.query as Record<string, string>;
+    if (status && !validStatuses.has(status)) {
+      return reply.status(400).send({ success: false, error: 'VALIDATION_ERROR', message: `status 必须是以下值之一: ${[...validStatuses].join(', ')}` });
+    }
     const result = await tcService.listTestCases({
       modelId,
       status,
