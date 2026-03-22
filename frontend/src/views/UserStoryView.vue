@@ -5,7 +5,6 @@
     <nav class="story-nav">
       <a href="#value" class="story-nav-link" @click.prevent="scrollTo('value')">领导价值</a>
       <a href="#userstory" class="story-nav-link" @click.prevent="scrollTo('userstory')">用户故事</a>
-      <a href="#scenarios" class="story-nav-link" @click.prevent="scrollTo('scenarios')">使用场景</a>
       <a href="#roadmap" class="story-nav-link" @click.prevent="scrollTo('roadmap')">下一步计划</a>
     </nav>
 
@@ -149,127 +148,25 @@
             </div>
           </div>
 
-        </div>
-      </div>
-    </section>
-
-    <!-- ══════════════════════════════════════════
-         第三屏：使用场景
-    ══════════════════════════════════════════ -->
-    <section id="scenarios" class="section section-scenarios">
-      <div class="section-inner">
-        <h2 class="section-title">5 个真实使用场景</h2>
-        <p class="section-sub">不同的工作情境，对应不同的使用路径</p>
-
-        <div class="scenario-list">
-
-          <div class="scenario-card">
-            <div class="scenario-header">
-              <span class="scenario-num">01</span>
-              <div>
-                <div class="scenario-title">接了个新接口，要从零建测试用例库</div>
-                <div class="scenario-mode mode-systematic">系统化模式</div>
-              </div>
-            </div>
-            <div class="scenario-body">
-              <div class="scenario-situation">
-                <strong>情境：</strong>产品刚上线一个新功能接口，要建立一套覆盖完整的基线测试用例，用于日后的回归验证。
-              </div>
-              <div class="scenario-steps">
-                <div class="step"><span class="step-num">1</span><span>在知识库上传业务规范文档（或直接上传到对话）</span></div>
-                <div class="step"><span class="step-num">2</span><span>新建对话，选「系统化」模式，输入：<em>"请对 MODEL_001 授信接口做全量系统化测试"</em></span></div>
-                <div class="step"><span class="step-num">3</span><span>AI 自动运用边界值分析（BVA）和等价类划分，生成覆盖各准入条件边界的测试用例并执行</span></div>
-                <div class="step"><span class="step-num">4</span><span>查看测试报告，将高质量用例入库，提交审核后晋级为「基线」</span></div>
-              </div>
-              <div class="scenario-result">✅ 产出：一套经过人工确认的基线用例库，下次回归可直接调用</div>
-            </div>
+          <div class="journey-connector">
+            <div class="journey-connector-line"></div>
+            <div class="journey-connector-label">其他常用场景</div>
           </div>
 
-          <div class="scenario-card">
-            <div class="scenario-header">
-              <span class="scenario-num">02</span>
-              <div>
-                <div class="scenario-title">业务规则刚改了，要验证没有破坏已有逻辑</div>
-                <div class="scenario-mode mode-regression">AI 回归推荐</div>
+          <div class="journey-extras">
+            <div class="extra-card">
+              <div class="extra-header">
+                <div class="journey-badge">探索模式</div>
+                <div class="journey-title">怀疑接口有隐藏 Bug，想主动挖掘</div>
               </div>
+              <div class="extra-desc">选「探索」模式，告诉 AI 怀疑方向（如 <em>"重点探查浮点数精度边界"</em>），Agent 以假设驱动方式自由设计非常规测试组合，主动寻找系统弱点，找到问题直接创建缺陷关联执行日志。</div>
             </div>
-            <div class="scenario-body">
-              <div class="scenario-situation">
-                <strong>情境：</strong>开发修改了授信系数的计算规则，需要在上线前确认改动没有引入回归 Bug。
+            <div class="extra-card">
+              <div class="extra-header">
+                <div class="journey-badge">知识库</div>
+                <div class="journey-title">团队要统一测试标准，不想每次重复说明</div>
               </div>
-              <div class="scenario-steps">
-                <div class="step"><span class="step-num">1</span><span>进入「用例库」，点击「AI 推荐回归用例」</span></div>
-                <div class="step"><span class="step-num">2</span><span>输入变更描述：<em>"修改了余额系数档位，1000 以上从 2.0 调整为 2.3"</em></span></div>
-                <div class="step"><span class="step-num">3</span><span>AI 综合语义、覆盖点、历史报告等多维数据，推荐最相关的基线用例并说明推荐理由</span></div>
-                <div class="step"><span class="step-num">4</span><span>勾选用例，一键执行回归，生成回归验证报告</span></div>
-              </div>
-              <div class="scenario-result">✅ 产出：精准回归报告，明确变更是否引入问题，而不是靠感觉</div>
-            </div>
-          </div>
-
-          <div class="scenario-card">
-            <div class="scenario-header">
-              <span class="scenario-num">03</span>
-              <div>
-                <div class="scenario-title">怀疑接口有隐藏的 Bug，想深度探查</div>
-                <div class="scenario-mode mode-exploratory">探索模式</div>
-              </div>
-            </div>
-            <div class="scenario-body">
-              <div class="scenario-situation">
-                <strong>情境：</strong>线上出现了一个罕见的异常，怀疑是某个边界条件处理不当，想主动挖掘。
-              </div>
-              <div class="scenario-steps">
-                <div class="step"><span class="step-num">1</span><span>新建对话，选「探索」模式</span></div>
-                <div class="step"><span class="step-num">2</span><span>输入怀疑方向：<em>"重点探查浮点数精度边界和并发下的结果一致性"</em></span></div>
-                <div class="step"><span class="step-num">3</span><span>AI 以假设驱动方式，自由设计非常规测试组合，主动寻找系统的弱点</span></div>
-                <div class="step"><span class="step-num">4</span><span>发现问题后，直接从报告创建缺陷，关联到具体用例和执行日志</span></div>
-              </div>
-              <div class="scenario-result">✅ 产出：可复现的 Bug 记录，关联完整执行日志，便于开发定位</div>
-            </div>
-          </div>
-
-          <div class="scenario-card">
-            <div class="scenario-header">
-              <span class="scenario-num">04</span>
-              <div>
-                <div class="scenario-title">团队要统一测试标准，不想每次重复说明</div>
-                <div class="scenario-mode mode-knowledge">知识库</div>
-              </div>
-            </div>
-            <div class="scenario-body">
-              <div class="scenario-situation">
-                <strong>情境：</strong>团队有多人使用平台，但测试风格不统一，有人遗漏边界，有人 expected 写得不够精确。
-              </div>
-              <div class="scenario-steps">
-                <div class="step"><span class="step-num">1</span><span>进入「知识库」→「业务规则库」，上传当前接口的业务规范文档，与模型 ID 绑定</span></div>
-                <div class="step"><span class="step-num">2</span><span>在「测试规范库」，为不同模式写入质量标准（如"expected 必须给出精确数值"）</span></div>
-                <div class="step"><span class="step-num">3</span><span>在「挡板场景库」，保存常用的外部依赖组合（如"黑名单用户"、"卡状态异常"），起名备用</span></div>
-                <div class="step"><span class="step-num">4</span><span>之后任何人发起对话时，只需输入模型 ID，以上内容自动注入 AI 上下文</span></div>
-              </div>
-              <div class="scenario-result">✅ 产出：团队经验固化为系统资产，新成员开箱即用，无需口口相传</div>
-            </div>
-          </div>
-
-          <div class="scenario-card">
-            <div class="scenario-header">
-              <span class="scenario-num">05</span>
-              <div>
-                <div class="scenario-title">领导要看这个月的测试质量情况</div>
-                <div class="scenario-mode mode-report">报告 + 缺陷管理</div>
-              </div>
-            </div>
-            <div class="scenario-body">
-              <div class="scenario-situation">
-                <strong>情境：</strong>月末质量复盘会，需要展示本月测试覆盖情况、发现的问题数量和处理进度。
-              </div>
-              <div class="scenario-steps">
-                <div class="step"><span class="step-num">1</span><span>「测试报告」页：查看本月各次执行报告，通过率一目了然（绿色≥100%、蓝色≥80%……）</span></div>
-                <div class="step"><span class="step-num">2</span><span>每份报告可在线预览 HTML，查看每条用例的入参、预期、实际结果和执行日志</span></div>
-                <div class="step"><span class="step-num">3</span><span>「缺陷管理」页：查看 P0/P1 缺陷数量和处理进度，筛选未关闭的高危缺陷</span></div>
-                <div class="step"><span class="step-num">4</span><span>从任意缺陷可追溯：关联的测试用例 → 来源报告 → 原始对话 → 业务规范文档</span></div>
-              </div>
-              <div class="scenario-result">✅ 产出：完整的质量数据链，复盘有据可查，汇报素材随手可得</div>
+              <div class="extra-desc">在「知识库」预置业务规范文档、测试规范（如"expected 必须给出精确数值"）和外部挡板场景（如"黑名单用户"）。之后任何人发起对话只需填写模型 ID，以上内容自动注入，经验固化为系统资产。</div>
             </div>
           </div>
 
@@ -458,26 +355,12 @@ function scrollTo(id) {
 .journey-connector-line { width: 2px; height: 24px; background: linear-gradient(to bottom, rgba(91,155,213,0.3), rgba(91,155,213,0.6)); }
 .journey-connector-label { font-size: 11px; color: var(--text-secondary); background: var(--sidebar-bg); border: 1px solid var(--border-color, #e8e8e8); border-radius: 20px; padding: 2px 12px; }
 
-/* ── 第三屏：场景 ── */
-.section-scenarios { background: var(--main-bg); }
-.scenario-list { display: flex; flex-direction: column; gap: 16px; }
-.scenario-card { background: var(--sidebar-bg); border: 1px solid var(--border-color, #e8e8e8); border-radius: 10px; padding: 24px; }
-.scenario-header { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 16px; }
-.scenario-num { font-size: 28px; font-weight: 800; color: rgba(91,155,213,0.3); line-height: 1; flex-shrink: 0; }
-.scenario-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
-.scenario-mode { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 12px; }
-.mode-systematic { background: rgba(91,155,213,0.12); color: #3a7ec8; }
-.mode-regression  { background: rgba(46,125,50,0.1);  color: #2e7d32; }
-.mode-exploratory { background: rgba(230,81,0,0.1);   color: #e65100; }
-.mode-knowledge   { background: rgba(123,31,162,0.1); color: #7b1fa2; }
-.mode-report      { background: rgba(0,131,143,0.1);  color: #00838f; }
-.scenario-body { padding-left: 44px; }
-.scenario-situation { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.6; }
-.scenario-steps { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-.step { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--text-primary); line-height: 1.6; }
-.step-num { background: #5b9bd5; color: #fff; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
-.step em { color: #5b9bd5; font-style: normal; background: rgba(91,155,213,0.08); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
-.scenario-result { font-size: 13px; font-weight: 500; color: #2e7d32; background: rgba(46,125,50,0.06); border-left: 3px solid #2e7d32; padding: 8px 12px; border-radius: 0 4px 4px 0; }
+/* ── 其他场景补充卡片 ── */
+.journey-extras { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.extra-card { background: var(--main-bg); border: 1px solid var(--border-color, #e8e8e8); border-radius: 10px; padding: 20px 22px; }
+.extra-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.extra-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+.extra-desc em { color: #5b9bd5; font-style: normal; background: rgba(91,155,213,0.08); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
 
 /* ── 第三屏：Roadmap ── */
 .section-roadmap { background: var(--sidebar-bg); }
@@ -513,7 +396,7 @@ function scrollTo(id) {
 
 /* ── 响应式兜底 ── */
 @media (max-width: 700px) {
-  .value-cards, .cta-items { grid-template-columns: 1fr; }
+  .value-cards, .cta-items, .journey-extras { grid-template-columns: 1fr; }
   .phases { flex-direction: column; }
   .phase-arrow { transform: rotate(90deg); }
   .hero-title { font-size: 22px; }
