@@ -4,6 +4,7 @@
     <!-- ── 导航锚点 ── -->
     <nav class="story-nav">
       <a href="#value" class="story-nav-link" @click.prevent="scrollTo('value')">领导价值</a>
+      <a href="#userstory" class="story-nav-link" @click.prevent="scrollTo('userstory')">用户故事</a>
       <a href="#scenarios" class="story-nav-link" @click.prevent="scrollTo('scenarios')">使用场景</a>
       <a href="#roadmap" class="story-nav-link" @click.prevent="scrollTo('roadmap')">下一步计划</a>
     </nav>
@@ -65,7 +66,95 @@
     </section>
 
     <!-- ══════════════════════════════════════════
-         第二屏：使用场景
+         第二屏：用户故事（连贯工作流）
+    ══════════════════════════════════════════ -->
+    <section id="userstory" class="section section-userstory">
+      <div class="section-inner">
+        <h2 class="section-title">用户故事</h2>
+        <p class="section-sub">从接到一个新接口，到建立可持续运转的质量体系——一个测试工程师的完整旅程</p>
+
+        <div class="journey">
+
+          <div class="journey-step">
+            <div class="journey-step-header">
+              <div class="journey-badge">场景一</div>
+              <div class="journey-title">我有一个新接口，想快速出一套测试用例</div>
+            </div>
+            <div class="journey-body">
+              <div class="journey-steps">
+                <div class="jstep"><span class="jstep-dot"></span><span>把业务规范文档上传到「知识库 → 业务规则库」，绑定接口模型编号</span></div>
+                <div class="jstep"><span class="jstep-dot"></span><span>打开聊天，选「系统化」模式，输入一句话：<em>"请对授信额度接口做全量系统化测试"</em></span></div>
+                <div class="jstep"><span class="jstep-dot"></span><span>Agent 自动读取业务规则、运用边界值分析生成用例、调接口执行、产出 HTML 报告，全程实时可见</span></div>
+                <div class="jstep"><span class="jstep-dot"></span><span>进报告详情页，看完结果，点「用例入库」——用例以草稿状态写入用例库，等待审核</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="journey-connector">
+            <div class="journey-connector-line"></div>
+            <div class="journey-connector-label">用例进入审核流程</div>
+          </div>
+
+          <div class="journey-step">
+            <div class="journey-step-header">
+              <div class="journey-badge">场景二</div>
+              <div class="journey-title">用例写完了，怎么过审、固化为基线</div>
+            </div>
+            <div class="journey-body">
+              <div class="journey-steps">
+                <div class="jstep"><span class="jstep-dot"></span><span>在用例库找到草稿用例，点「提交审核」</span></div>
+                <div class="jstep"><span class="jstep-dot"></span><span>审核人逐条查看，批准则变「已审批」，不合格打回并附意见，修改后重新提交</span></div>
+                <div class="jstep"><span class="jstep-dot"></span><span>审批通过后，技术负责人点「晋级基线」，这条用例正式锁定</span></div>
+                <div class="jstep"><span class="jstep-dot"></span><span>基线用例不能直接修改——后续要改，必须新建版本，老版本完整保留，历史可追溯</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="journey-connector">
+            <div class="journey-connector-line"></div>
+            <div class="journey-connector-label">几周后，接口规则有变更</div>
+          </div>
+
+          <div class="journey-step">
+            <div class="journey-step-header">
+              <div class="journey-badge">场景三</div>
+              <div class="journey-title">接口规则改了，我该跑哪些用例</div>
+            </div>
+            <div class="journey-body">
+              <div class="journey-steps">
+                <div class="jstep"><span class="jstep-dot"></span><span>进用例库，点「AI 回归推荐」，输入这次改动描述：<em>"月收入判断阈值从 10000 调整为 12000"</em></span></div>
+                <div class="jstep"><span class="jstep-dot"></span><span>大模型结合用例的覆盖点、历史报告、来源对话语义推理，按相关度排序，每条附推荐理由</span></div>
+                <div class="jstep"><span class="jstep-dot"></span><span>勾选相关用例，切换「回归」模式发起测试，出回归验证报告</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="journey-connector">
+            <div class="journey-connector-line"></div>
+            <div class="journey-connector-label">回归发现失败用例</div>
+          </div>
+
+          <div class="journey-step">
+            <div class="journey-step-header">
+              <div class="journey-badge">场景四</div>
+              <div class="journey-title">测试发现 Bug，怎么记录和追溯</div>
+            </div>
+            <div class="journey-body">
+              <div class="journey-steps">
+                <div class="jstep"><span class="jstep-dot"></span><span>在报告里找到失败用例，点「创建缺陷」——执行日志自动带入，无需手填</span></div>
+                <div class="jstep"><span class="jstep-dot"></span><span>缺陷详情可以一路向上追：缺陷 → 执行用例 → 测试报告 → 当时的对话 → 上传的业务文档</span></div>
+                <div class="jstep"><span class="jstep-dot"></span><span>缺陷按状态流转：待处理 → 处理中 → 已解决，评论区随时跟进进展</span></div>
+              </div>
+              <div class="journey-result">整个流程走完，从接口接入到发现 Bug 全程有迹可查，下一轮迭代直接复用基线用例库</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         第三屏：使用场景
     ══════════════════════════════════════════ -->
     <section id="scenarios" class="section section-scenarios">
       <div class="section-inner">
@@ -347,7 +436,29 @@ function scrollTo(id) {
 .compare-item.new .compare-points span { color: var(--text-primary); }
 .compare-arrow { font-size: 24px; color: #5b9bd5; display: flex; align-items: center; padding: 0 8px; }
 
-/* ── 第二屏：场景 ── */
+/* ── 用户故事（连贯流程）── */
+.section-userstory { background: var(--sidebar-bg); }
+
+.journey { display: flex; flex-direction: column; }
+
+.journey-step { background: var(--main-bg); border: 1px solid var(--border-color, #e8e8e8); border-radius: 10px; padding: 24px 28px; }
+.journey-step-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+.journey-badge { background: rgba(91,155,213,0.12); color: #5b9bd5; border: 1px solid rgba(91,155,213,0.25); border-radius: 20px; padding: 3px 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.journey-title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+
+.journey-body { padding-left: 4px; }
+.journey-steps { display: flex; flex-direction: column; gap: 10px; }
+.jstep { display: flex; gap: 12px; align-items: flex-start; font-size: 13px; color: var(--text-primary); line-height: 1.7; }
+.jstep-dot { width: 7px; height: 7px; border-radius: 50%; background: #5b9bd5; flex-shrink: 0; margin-top: 7px; }
+.jstep em { color: #5b9bd5; font-style: normal; background: rgba(91,155,213,0.08); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+
+.journey-result { margin-top: 16px; font-size: 13px; font-weight: 500; color: #2e7d32; background: rgba(46,125,50,0.06); border-left: 3px solid #2e7d32; padding: 8px 14px; border-radius: 0 4px 4px 0; }
+
+.journey-connector { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; }
+.journey-connector-line { width: 2px; height: 24px; background: linear-gradient(to bottom, rgba(91,155,213,0.3), rgba(91,155,213,0.6)); }
+.journey-connector-label { font-size: 11px; color: var(--text-secondary); background: var(--sidebar-bg); border: 1px solid var(--border-color, #e8e8e8); border-radius: 20px; padding: 2px 12px; }
+
+/* ── 第三屏：场景 ── */
 .section-scenarios { background: var(--main-bg); }
 .scenario-list { display: flex; flex-direction: column; gap: 16px; }
 .scenario-card { background: var(--sidebar-bg); border: 1px solid var(--border-color, #e8e8e8); border-radius: 10px; padding: 24px; }

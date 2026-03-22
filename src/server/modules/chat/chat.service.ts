@@ -206,9 +206,16 @@ export async function* sendMessageStreaming(
     agentQuery = `[SYSTEM CONTEXT]\n${contextParts.join('\n')}\n[/SYSTEM CONTEXT]\n\n${message}`;
   }
 
-  // 7. Start heartbeat and agent (non-blocking — pushes events to queue)
+  // 7. Start title generation early so it runs in parallel with the agent.
+  // The null sentinel must not be pushed until title generation completes,
+  // otherwise the SSE connection closes before title_generated reaches the client.
+  const titlePromise = isNewConversation
+    ? generateAndUpdateTitle(conversationId, userId, message, queue)
+    : Promise.resolve();
+
+  // 8. Start heartbeat and agent (non-blocking — pushes events to queue)
   queue.startHeartbeat();
-  const agentPromise = runTestAgent({
+  runTestAgent({
     query: agentQuery,
     workspace: workspace.getScratchDir(conversationId),
     provider: config.llm.provider,
@@ -244,18 +251,14 @@ export async function* sendMessageStreaming(
       }
     },
     signal: abortController.signal,
-  }).then(() => {
-    queue.push(null); // end signal
+  }).then(async () => {
+    await titlePromise; // ensure title_generated is sent before closing the stream
+    queue.push(null);  // end signal
   }).catch((err) => {
     logger.error({ err, conversationId }, 'Agent error');
     queue.push({ type: 'error', message: err.message ?? String(err) });
     queue.push(null);
   });
-
-  // 8. Async title generation for new conversations
-  if (isNewConversation) {
-    generateAndUpdateTitle(conversationId, userId, message, queue);
-  }
 
   // 9. Consume queue and yield events
   try {

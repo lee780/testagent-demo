@@ -36,6 +36,7 @@ export async function generateTitle(userMessage: string): Promise<string> {
   try {
     const response = await fetch(apiUrl, {
       method: 'POST',
+      signal: AbortSignal.timeout(8000),
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
