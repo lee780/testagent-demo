@@ -20,11 +20,14 @@
 
 import 'dotenv/config';
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import { getLogger } from '../server/config/logger.js';
 
 const PORT = parseInt(process.env.STUB_SERVER_PORT ?? '8002');
 const app = Fastify({ logger: false });
 const logger = getLogger();
+
+await app.register(cors, { origin: true });
 
 // ── 数据结构 ───────────────────────────────────────────────
 
@@ -98,6 +101,15 @@ app.post('/_admin/ext-services', async (request, reply) => {
 
 /** 列出所有外部服务 */
 app.get('/_admin/ext-services', async () => extServices);
+
+/** 删除单条外部服务 */
+app.delete('/_admin/ext-services', async (request, reply) => {
+  const { path } = request.body as any ?? {};
+  if (!path) return reply.status(400).send({ error: 'path is required' });
+  const idx = extServices.findIndex(s => s.path === path);
+  if (idx >= 0) extServices.splice(idx, 1);
+  return { ok: true };
+});
 
 /** 清空外部服务列表 */
 app.delete('/_admin/ext-services/clear', async () => {

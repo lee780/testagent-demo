@@ -77,6 +77,12 @@ const router = createRouter({
       component: () => import('../views/UserStoryView.vue'),
       meta: { requiresAuth: true }
     },
+    {
+      path: '/stub-server',
+      name: 'stub-server',
+      component: () => import('../views/StubServerView.vue'),
+      meta: { requiresAuth: true }
+    },
   ]
 })
 
