@@ -14,18 +14,6 @@ export interface TestProgressEvent {
   failed: number;
 }
 
-export interface SaveTestCaseEvent {
-  modelId: string;
-  caseCode: string;
-  title: string;
-  coveragePoint?: string;
-  priority?: string;
-  inputParams?: Record<string, unknown>;
-  expectedResult?: Record<string, unknown>;
-  conversationId?: string;
-  sourceMode?: string;
-}
-
 export interface ToolConfig {
   /** Root workspace directory (all file access is bounded here). */
   workspace: string;
@@ -37,10 +25,14 @@ export interface ToolConfig {
   userId: string;
   /** Current conversation ID. */
   conversationId: string;
+  /** Test mode — used to tag auto-created report records. */
+  mode?: string;
   /** Called after each test case completes — for real-time SSE progress. */
   onProgress?: (event: TestProgressEvent) => void;
-  /** Called for each test case to save to the test case library (fire-and-forget). */
-  onSaveTestCase?: (tc: SaveTestCaseEvent) => void;
+  /** Called when the agent reports a named execution stage update. */
+  onStageUpdate?: (stage: string, status: 'started' | 'done' | 'failed', detail?: string) => void;
+  /** Uploaded input file names (business rule docs) for this conversation. */
+  uploadedFiles?: string[];
 }
 
 const DEFAULT_CODE_INDEX_URL = "http://code-index-service:8080";
@@ -53,8 +45,8 @@ export function createToolConfig(overrides: Partial<ToolConfig> = {}): ToolConfi
     outputDir: overrides.outputDir ?? process.env.AGENT_OUTPUT_DIR ?? DEFAULT_OUTPUT_DIR,
     userId: overrides.userId ?? "",
     conversationId: overrides.conversationId ?? "",
+    mode: overrides.mode,
     onProgress: overrides.onProgress,
-    onSaveTestCase: overrides.onSaveTestCase,
   };
 }
 

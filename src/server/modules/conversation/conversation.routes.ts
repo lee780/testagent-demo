@@ -114,4 +114,14 @@ export async function registerConversationRoutes(app: FastifyInstance): Promise<
       return conversationService.getConversationPlan(id, request.currentUser!.user_id);
     }
   );
+
+  // GET /api/conversations/:id/stages
+  app.get(
+    '/api/conversations/:id/stages',
+    { preHandler: [authenticate] },
+    async (request: FastifyRequest, _reply: FastifyReply) => {
+      const { id } = request.params as { id: string };
+      return conversationService.getStagesSnapshot(id, request.currentUser!.user_id);
+    }
+  );
 }

@@ -79,7 +79,7 @@ model Conversation {
   coordinatorPlan CoordinatorPlan?
   testReports TestReport[]
 
-  @@index([userId])
+  @@index([userId, updatedAt])
   @@index([createdAt])
   @@map("conversations")
 }
@@ -283,17 +283,19 @@ model TestExecution {
 }
 
 model TestReport {
-  id             String   @id @default(uuid())
-  name           String
-  conversationId String   @map("conversation_id")
-  executionMode  String?  @map("execution_mode")
-  htmlFile       String   @map("html_file")
-  testCasesData  Json?    @map("test_cases_data")
-  casesImported  Boolean  @default(false) @map("cases_imported")
-  uploadedDocs   String[] @default([]) @map("uploaded_docs")
-  createdBy      String   @map("created_by")
-  createdAt      DateTime @default(now()) @map("created_at")
-  updatedAt      DateTime @updatedAt @map("updated_at")
+  id               String   @id @default(uuid())
+  name             String
+  conversationId   String   @map("conversation_id")
+  executionMode    String?  @map("execution_mode")
+  htmlFile         String?  @map("html_file")
+  testCasesData    Json?    @map("test_cases_data")
+  executionResults Json?    @map("execution_results")
+  recommendation   String?  @db.Text
+  casesImported    Boolean  @default(false) @map("cases_imported")
+  uploadedDocs     String[] @default([]) @map("uploaded_docs")
+  createdBy        String   @map("created_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   conversation Conversation @relation(fields: [conversationId], references: [id])
   user         User         @relation(fields: [createdBy], references: [id])

@@ -263,6 +263,11 @@ export default {
     return api.get(`/conversations/${conversationId}/plan`)
   },
 
+  // 获取对话的阶段进度快照（用于历史回放）
+  getConversationStages(conversationId) {
+    return api.get(`/conversations/${conversationId}/stages`)
+  },
+
   // ==================== 用例库 ====================
   listTestCases(params) {
     return api.get('/testcases', { params })

@@ -1,21 +1,54 @@
 /**
  * Test Runner Tool — end-to-end: YAML → DB setup → HTTP call → validate → report
  *
- * run_test_suite(yaml_dir, base_url, report_path?)
+ * run_test_suite(yaml_dir, base_url)
  *   1. Scans the directory for *.yaml test case files
  *   2. For each case: upserts DB preconditions via Prisma
  *   3. POSTs the XML request to the mock endpoint
  *   4. Validates XML response against assertions (xpath-style //tag)
- *   5. Outputs a Markdown test report
+ *   5. Auto-saves TestReport record to DB; returns report_id
  */
 
-import { readFileSync, readdirSync, writeFileSync, mkdirSync } from "node:fs";
-import { join, resolve, dirname, basename } from "node:path";
+import { readFileSync, readdirSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { Type, type Static } from "@sinclair/typebox";
 import { getPrisma } from "../../server/config/database.js";
 import type { AgentToolDef, AgentToolResult } from "./code-index.js";
 import type { ToolConfig } from "./config.js";
+
+// ── Recommendation generator ─────────────────────────────
+
+function buildRecommendation(results: CaseResult[]): string {
+  const total = results.length;
+  const passed = results.filter((r) => r.status === "PASSED").length;
+  const failed = results.filter((r) => r.status !== "PASSED").length;
+  const passRate = total > 0 ? (passed / total) * 100 : 0;
+  const p0Failed = results.filter((r) => r.status !== "PASSED" && r.priority === "P0").length;
+  const p1Failed = results.filter((r) => r.status !== "PASSED" && r.priority === "P1").length;
+
+  const lines: string[] = [];
+
+  if (p0Failed > 0) {
+    lines.push(`❌ 存在 ${p0Failed} 个 P0 核心用例失败，系统存在高风险问题，建议修复后再入库。`);
+  } else if (p1Failed > 0) {
+    lines.push(`⚠️ 存在 ${p1Failed} 个 P1 用例失败，建议评估影响范围后决定是否入库。`);
+  } else if (failed > 0) {
+    lines.push(`ℹ️ 存在 ${failed} 个非核心用例失败，整体风险较低，可入库并跟踪缺陷。`);
+  } else {
+    lines.push(`✅ 全部用例通过，质量良好，可以入库。`);
+  }
+
+  if (passRate < 80) {
+    lines.push(`通过率 ${passRate.toFixed(1)}% 低于 80%，建议全面排查失败原因后重新执行。`);
+  } else if (passRate < 100) {
+    lines.push(`通过率 ${passRate.toFixed(1)}%，请针对失败用例创建缺陷并跟踪修复。`);
+  } else {
+    lines.push(`通过率 100%，建议执行回归测试后将用例升级为基线。`);
+  }
+
+  return lines.join("\n");
+}
 
 // ── Helpers ──────────────────────────────────────────────
 
@@ -210,313 +243,14 @@ async function runOneCase(tc: any, baseUrl: string, suite: SuiteConfig): Promise
   }
 }
 
-// ── Markdown report ───────────────────────────────────────
-
-function buildReport(results: CaseResult[], baseUrl: string, durationMs: number, suiteName = "接口测试"): string {
-  const total = results.length;
-  const passed = results.filter((r) => r.status === "PASSED").length;
-  const failed = results.filter((r) => r.status === "FAILED").length;
-  const errors = results.filter((r) => r.status === "ERROR").length;
-  const passRate = total > 0 ? ((passed / total) * 100).toFixed(1) : "0.0";
-  const now = new Date().toISOString().replace("T", " ").slice(0, 19);
-
-  const lines: string[] = [
-    `# ${suiteName} — 测试报告`,
-    ``,
-    `- **生成时间**: ${now}`,
-    `- **被测地址**: ${baseUrl}/mock/model/score`,
-    `- **总耗时**: ${(durationMs / 1000).toFixed(2)}s`,
-    ``,
-    `## 汇总`,
-    ``,
-    `| 指标 | 数值 |`,
-    `|------|------|`,
-    `| 总用例数 | ${total} |`,
-    `| 通过 | ✅ ${passed} |`,
-    `| 失败 | ❌ ${failed} |`,
-    `| 错误 | ⚠️ ${errors} |`,
-    `| 通过率 | **${passRate}%** |`,
-    ``,
-    `## 详细结果`,
-    ``,
-  ];
-
-  for (const r of results) {
-    const icon = r.status === "PASSED" ? "✅" : r.status === "FAILED" ? "❌" : "⚠️";
-    lines.push(`### ${icon} [${r.status}] ${r.id} — ${r.name}`);
-    lines.push(``);
-    lines.push(`- 分类: ${r.category}  优先级: ${r.priority}  耗时: ${r.duration_ms}ms  HTTP: ${r.http_status ?? "N/A"}`);
-    if (r.error) {
-      lines.push(`- **错误**: ${r.error}`);
-    }
-    if (r.assertions.length > 0) {
-      lines.push(``);
-      lines.push(`| 断言 | 期望 | 实际 | 结果 |`);
-      lines.push(`|------|------|------|------|`);
-      for (const a of r.assertions) {
-        const icon2 = a.passed ? "✅" : "❌";
-        lines.push(`| ${a.desc ?? a.path} \`${a.op}\` | \`${a.expected}\` | \`${a.actual ?? "null"}\` | ${icon2} |`);
-      }
-    }
-    lines.push(``);
-  }
-
-  // Failed cases summary at bottom
-  const failedCases = results.filter((r) => r.status !== "PASSED");
-  if (failedCases.length > 0) {
-    lines.push(`## 失败/异常用例汇总`);
-    lines.push(``);
-    for (const r of failedCases) {
-      lines.push(`- **${r.id}** (${r.status}): ${r.name}`);
-      for (const a of r.assertions.filter((a) => !a.passed)) {
-        lines.push(`  - \`${a.path}\`: 期望 \`${a.expected}\` 实际 \`${a.actual ?? "null"}\``);
-      }
-      if (r.error) lines.push(`  - 错误: ${r.error}`);
-    }
-  }
-
-  return lines.join("\n");
-}
-
-// ── HTML Report (HttpRunner style) ───────────────────────
-
-function esc(s: string): string {
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-function buildHtmlReport(results: CaseResult[], baseUrl: string, durationMs: number, suiteName = "MODEL_001 接口测试"): string {
-  const total = results.length;
-  const passed = results.filter((r) => r.status === "PASSED").length;
-  const failed = results.filter((r) => r.status === "FAILED").length;
-  const errors = results.filter((r) => r.status === "ERROR").length;
-  const passRate = total > 0 ? ((passed / total) * 100).toFixed(1) : "0.0";
-  const now = new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai" });
-  const durationS = (durationMs / 1000).toFixed(2);
-
-  // Per-category summary
-  const categories = [...new Set(results.map((r) => r.category || "其他"))];
-  const catRows = categories.map((cat) => {
-    const catRes = results.filter((r) => (r.category || "其他") === cat);
-    const cp = catRes.filter((r) => r.status === "PASSED").length;
-    return `<tr><td>${esc(cat)}</td><td>${catRes.length}</td><td class="pass">${cp}</td><td class="fail">${catRes.length - cp}</td></tr>`;
-  }).join("\n");
-
-  // Coverage point summary table
-  const coverageMap = new Map<string, { total: number; passed: number }>();
-  for (const r of results) {
-    const cp = r.coverage_point ?? "（未标注）";
-    const prev = coverageMap.get(cp) ?? { total: 0, passed: 0 };
-    coverageMap.set(cp, {
-      total: prev.total + 1,
-      passed: prev.passed + (r.status === "PASSED" ? 1 : 0),
-    });
-  }
-  const coverageRows = [...coverageMap.entries()].map(([cp, s]) => {
-    const allPass = s.passed === s.total;
-    const cls = allPass ? "pass" : "fail";
-    const icon = allPass ? "✅" : "❌";
-    return `<tr><td class="cp-cell">${esc(cp)}</td><td>${s.total}</td><td class="${cls}">${s.passed}</td><td class="${s.total - s.passed > 0 ? "fail" : "pass"}">${s.total - s.passed}</td><td>${icon}</td></tr>`;
-  }).join("\n");
-
-  // Case rows with execution detail
-  const caseRows = results.map((r) => {
-    const statusCls = r.status === "PASSED" ? "badge-pass" : r.status === "FAILED" ? "badge-fail" : "badge-error";
-    const assertHtml = r.assertions.map((a) => {
-      const cls = a.passed ? "assert-pass" : "assert-fail";
-      return `<div class="assert-row ${cls}">
-        <span class="assert-icon">${a.passed ? "✓" : "✗"}</span>
-        <span class="assert-desc">${esc(a.desc ?? a.path)}</span>
-        <span class="assert-detail">期望 <code>${esc(a.expected)}</code> · 实际 <code>${esc(String(a.actual ?? "null"))}</code></span>
-      </div>`;
-    }).join("\n");
-    const errorHtml = r.error ? `<div class="error-msg">⚠ ${esc(r.error)}</div>` : "";
-    const coverageTag = r.coverage_point
-      ? `<span class="cp-tag" title="设计来源">${esc(r.coverage_point)}</span>` : "";
-    const reqHtml = r.request_body
-      ? `<div class="log-block"><div class="log-label">📤 请求报文 <span class="log-url">${esc(r.request_url ?? "")}</span></div><pre class="log-pre">${esc(r.request_body)}</pre></div>` : "";
-    const respHtml = r.response_body
-      ? `<div class="log-block"><div class="log-label">📥 应答报文</div><pre class="log-pre">${esc(r.response_body)}</pre></div>` : "";
-    const dbHtml = r.db_setup_summary
-      ? `<div class="log-block"><div class="log-label">🗄 埋数（DB preconditions）</div><div class="log-db">${esc(r.db_setup_summary)}</div></div>` : "";
-    return `
-    <tr class="case-row" onclick="toggleDetail('${esc(r.id)}')">
-      <td><span class="badge ${statusCls}">${r.status}</span></td>
-      <td class="case-id">${esc(r.id)}</td>
-      <td>${esc(r.name)}${coverageTag}</td>
-      <td>${esc(r.category)}</td>
-      <td><span class="priority-badge p${r.priority.toLowerCase()}">${r.priority}</span></td>
-      <td>${r.http_status ?? "-"}</td>
-      <td>${r.duration_ms}ms</td>
-    </tr>
-    <tr class="detail-row" id="detail-${esc(r.id)}" style="display:none">
-      <td colspan="7">
-        <div class="detail-body">
-          ${errorHtml}
-          ${dbHtml}
-          ${reqHtml}
-          ${respHtml}
-          <div class="log-block assertions-block">
-            <div class="log-label">✔ 检查点断言</div>
-            ${assertHtml || "<div class='no-assert'>无断言</div>"}
-          </div>
-        </div>
-      </td>
-    </tr>`;
-  }).join("\n");
-
-  return `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(suiteName)} — 测试报告</title>
-<style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f6fa;color:#333;font-size:14px}
-  .header{background:linear-gradient(135deg,#1a237e 0%,#283593 100%);color:#fff;padding:24px 32px}
-  .header h1{font-size:22px;font-weight:600;margin-bottom:4px}
-  .header .meta{opacity:.8;font-size:13px}
-  .container{max-width:1200px;margin:24px auto;padding:0 24px}
-  .summary-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px}
-  .summary-card{background:#fff;border-radius:8px;padding:20px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-  .summary-card .value{font-size:32px;font-weight:700;line-height:1.2}
-  .summary-card .label{color:#888;font-size:12px;margin-top:4px}
-  .summary-card.total .value{color:#333}
-  .summary-card.pass .value{color:#2e7d32}
-  .summary-card.fail .value{color:#c62828}
-  .summary-card.error .value{color:#e65100}
-  .summary-card.rate .value{color:#1565c0}
-  .progress-bar{height:8px;background:#e0e0e0;border-radius:4px;margin:16px 0;overflow:hidden}
-  .progress-fill{height:100%;background:linear-gradient(90deg,#2e7d32,#66bb6a);border-radius:4px;transition:width .3s}
-  .section{background:#fff;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:20px;overflow:hidden}
-  .section-title{padding:14px 20px;font-weight:600;font-size:15px;border-bottom:1px solid #f0f0f0;background:#fafafa}
-  table{width:100%;border-collapse:collapse}
-  th{background:#f5f6fa;padding:10px 14px;text-align:left;font-weight:600;font-size:13px;color:#555;border-bottom:2px solid #e0e0e0}
-  td{padding:10px 14px;border-bottom:1px solid #f0f0f0;vertical-align:top}
-  .case-row{cursor:pointer;transition:background .15s}
-  .case-row:hover{background:#f9f9ff}
-  .detail-row td{padding:0;background:#f7f8ff}
-  .detail-body{padding:16px 20px;border-left:3px solid #3f51b5}
-  .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600}
-  .badge-pass{background:#e8f5e9;color:#2e7d32}
-  .badge-fail{background:#ffebee;color:#c62828}
-  .badge-error{background:#fff3e0;color:#e65100}
-  .priority-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
-  .priority-badge.pp0{background:#fce4ec;color:#c62828}
-  .priority-badge.pp1{background:#fff3e0;color:#e65100}
-  .priority-badge.pp2{background:#e3f2fd;color:#1565c0}
-  .assert-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #eee;flex-wrap:wrap}
-  .assert-row:last-child{border-bottom:none}
-  .assert-pass .assert-icon{color:#2e7d32;font-weight:700}
-  .assert-fail .assert-icon{color:#c62828;font-weight:700}
-  .assert-desc{font-weight:500;min-width:120px}
-  .assert-detail{color:#666;font-size:13px}
-  code{background:#f0f0f0;padding:1px 6px;border-radius:3px;font-family:monospace;font-size:12px}
-  .error-msg{color:#c62828;background:#ffebee;padding:8px 12px;border-radius:4px;margin-bottom:8px}
-  .no-assert{color:#aaa;font-style:italic}
-  .pass{color:#2e7d32;font-weight:600}
-  .fail{color:#c62828;font-weight:600}
-  .case-id{font-family:monospace;font-size:12px;color:#555}
-  .footer{text-align:center;color:#aaa;font-size:12px;padding:20px;margin-top:8px}
-  /* execution log styles */
-  .cp-tag{display:inline-block;margin-left:8px;padding:1px 8px;background:#e8f4fd;color:#1565c0;border-radius:10px;font-size:11px;font-weight:500;vertical-align:middle}
-  .cp-cell{font-size:12px;color:#444;max-width:360px}
-  .log-block{margin-bottom:12px}
-  .log-block:last-child{margin-bottom:0}
-  .log-label{font-size:12px;font-weight:600;color:#555;margin-bottom:6px}
-  .log-url{font-weight:400;color:#888;font-family:monospace;font-size:11px;margin-left:6px}
-  .log-pre{background:#f5f6fa;border:1px solid #e0e0e0;border-radius:4px;padding:10px 12px;font-family:monospace;font-size:12px;color:#333;overflow-x:auto;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto}
-  .log-db{background:#f5f6fa;border:1px solid #e0e0e0;border-radius:4px;padding:8px 12px;font-family:monospace;font-size:12px;color:#333}
-  .assertions-block .assert-row{padding:8px 0}
-</style>
-</head>
-<body>
-<div class="header">
-  <h1>📊 ${esc(suiteName)}</h1>
-  <div class="meta">生成时间: ${now} &nbsp;|&nbsp; 被测地址: ${esc(baseUrl)}/mock/model/score &nbsp;|&nbsp; 总耗时: ${durationS}s</div>
-</div>
-<div class="container">
-
-  <!-- Summary Cards -->
-  <div class="summary-grid">
-    <div class="summary-card total"><div class="value">${total}</div><div class="label">总用例数</div></div>
-    <div class="summary-card pass"><div class="value">${passed}</div><div class="label">通过</div></div>
-    <div class="summary-card fail"><div class="value">${failed}</div><div class="label">失败</div></div>
-    <div class="summary-card error"><div class="value">${errors}</div><div class="label">错误</div></div>
-    <div class="summary-card rate"><div class="value">${passRate}%</div><div class="label">通过率</div></div>
-  </div>
-  <div class="progress-bar"><div class="progress-fill" style="width:${passRate}%"></div></div>
-
-  <!-- Category Summary -->
-  <div class="section">
-    <div class="section-title">按分类汇总</div>
-    <table>
-      <thead><tr><th>分类</th><th>总数</th><th>通过</th><th>失败/错误</th></tr></thead>
-      <tbody>${catRows}</tbody>
-    </table>
-  </div>
-
-  <!-- Coverage Traceability Table -->
-  <div class="section">
-    <div class="section-title">设计追溯（思维导图覆盖点 → 执行结果）</div>
-    <table>
-      <thead><tr><th>覆盖点（思维导图节点）</th><th>用例数</th><th>通过</th><th>失败/错误</th><th>结果</th></tr></thead>
-      <tbody>${coverageRows}</tbody>
-    </table>
-  </div>
-
-  <!-- Case Details -->
-  <div class="section">
-    <div class="section-title">用例明细（点击行展开：埋数 / 请求报文 / 应答报文 / 检查点）</div>
-    <table>
-      <thead><tr><th>状态</th><th>用例ID</th><th>用例名称</th><th>分类</th><th>优先级</th><th>HTTP</th><th>耗时</th></tr></thead>
-      <tbody>${caseRows}</tbody>
-    </table>
-  </div>
-
-</div>
-<div class="footer">TestPilot 测试领航 · 自动化测试报告 · 参考 HttpRunner 报告体系</div>
-<script>
-function toggleDetail(id){
-  var el=document.getElementById('detail-'+id);
-  if(el) el.style.display=el.style.display==='none'?'table-row':'none';
-}
-</script>
-</body>
-</html>`;
-}
-
-// ── Save raw test case data for later import ─────────────
-
-function saveRawTestCases(
-  cases: Array<unknown>,
-  outputDir: string,
-  userId: string,
-  conversationId: string,
-): string | undefined {
-  if (!outputDir || !userId || !conversationId) return undefined;
-  try {
-    const outDir = resolve(outputDir, userId, conversationId);
-    mkdirSync(outDir, { recursive: true });
-    const rawPath = join(outDir, "test_cases_raw.json");
-    writeFileSync(rawPath, JSON.stringify(cases, null, 2), "utf-8");
-    return rawPath;
-  } catch {
-    return undefined;
-  }
-}
-
 // ── Tool Definition ───────────────────────────────────────
 
 const RunTestSuiteParams = Type.Object({
   yaml_dir: Type.String({
-    description: "Directory containing *.yaml test case files generated from the test case template",
+    description: "Directory containing *.yaml test case files",
   }),
   base_url: Type.Optional(Type.String({
     description: "Base URL of the system under test (default: http://localhost:8000)",
-  })),
-  report_path: Type.Optional(Type.String({
-    description: "Output path for the Markdown test report (default: <yaml_dir>/test_report.md)",
   })),
 });
 
@@ -526,7 +260,7 @@ export function createTestRunnerTools(config?: ToolConfig): AgentToolDef[] {
     label: "Run Test Suite",
     description:
       "Execute all YAML test cases in a directory against the mock API: sets up DB preconditions, " +
-      "sends HTTP requests, validates assertions, and writes a Markdown test report.",
+      "sends HTTP requests, validates assertions, and auto-saves a TestReport record to DB.",
     parameters: RunTestSuiteParams,
     execute: async (_id, params) => {
       const baseUrl = params.base_url ?? "http://localhost:8000";
@@ -582,11 +316,6 @@ export function createTestRunnerTools(config?: ToolConfig): AgentToolDef[] {
         }
       }
 
-      // Save raw test case data to output dir for later manual import
-      if (config?.outputDir && config?.userId && config?.conversationId) {
-        saveRawTestCases(allJobs.map(j => j.tc), config.outputDir, config.userId, config.conversationId);
-      }
-
       // Phase 2: run cases concurrently (limit 10), emit progress after each
       const total = allJobs.length;
       let completed = 0;
@@ -612,44 +341,44 @@ export function createTestRunnerTools(config?: ToolConfig): AgentToolDef[] {
 
       const allResults: CaseResult[] = [...parseErrors, ...concurrentResults];
       const suiteDuration = Date.now() - suiteStart;
-      const report = buildReport(allResults, baseUrl, suiteDuration, suiteName);
-      const htmlReport = buildHtmlReport(allResults, baseUrl, suiteDuration, suiteName);
-
-      // Write Markdown report
-      const reportPath = params.report_path ?? join(yamlDir, "test_report.md");
-      const htmlReportPath = reportPath.replace(/\.md$/, ".html");
-      try {
-        mkdirSync(dirname(reportPath), { recursive: true });
-        writeFileSync(reportPath, report, "utf-8");
-        writeFileSync(htmlReportPath, htmlReport, "utf-8");
-      } catch (err: any) {
-        return text({ status: "error", error: `Cannot write report: ${err.message}` });
-      }
 
       const passed = allResults.filter((r) => r.status === "PASSED").length;
       const failed = allResults.filter((r) => r.status === "FAILED").length;
       const errors = allResults.filter((r) => r.status === "ERROR").length;
+      const recommendation = buildRecommendation(allResults);
 
-      // Also copy reports to the agent output dir so the frontend download panel can list them
-      let downloadPath: string | undefined;
-      let htmlDownloadPath: string | undefined;
-      if (config?.outputDir && config.userId && config.conversationId) {
+      // Auto-create report record in DB
+      let reportId: string | undefined;
+      if (config?.userId && config?.conversationId) {
         try {
-          const outDir = resolve(config.outputDir, config.userId, config.conversationId);
-          mkdirSync(outDir, { recursive: true });
-          const outFile = join(outDir, basename(reportPath));
-          const htmlOutFile = join(outDir, basename(htmlReportPath));
-          writeFileSync(outFile, report, "utf-8");
-          writeFileSync(htmlOutFile, htmlReport, "utf-8");
-          downloadPath = outFile;
-          htmlDownloadPath = htmlOutFile;
+          const prisma = getPrisma();
+          const modeStr = config.mode ?? "systematic";
+          const modeLabel: Record<string, string> = { systematic: "系统化", regression: "回归", exploratory: "探索", chaos: "混沌" };
+          const dateStr = new Date().toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" }).replace(/\//g, "-");
+          const reportName = `${suiteName} [${modeLabel[modeStr] ?? modeStr}] ${dateStr}`;
+          const reportRecord = await prisma.testReport.create({
+            data: {
+              name: reportName,
+              conversationId: config.conversationId,
+              executionMode: config.mode ?? "systematic",
+              htmlFile: null as any,
+              executionResults: allResults as any,
+              testCasesData: allJobs.map((j) => j.tc) as any,
+              recommendation,
+              uploadedDocs: config.uploadedFiles ?? [],
+              createdBy: config.userId,
+            },
+          });
+          reportId = reportRecord.id;
         } catch {
-          // non-fatal
+          // non-fatal — summary still returned to agent
         }
       }
 
       return text({
         status: "ok",
+        report_id: reportId,
+        report_url: reportId ? `/reports/${reportId}` : undefined,
         summary: {
           total: allResults.length,
           passed,
@@ -660,10 +389,7 @@ export function createTestRunnerTools(config?: ToolConfig): AgentToolDef[] {
             : "0.0%",
           duration_ms: suiteDuration,
         },
-        report_path: reportPath,
-        html_report_path: htmlReportPath,
-        download_path: downloadPath,
-        html_download_path: htmlDownloadPath,
+        recommendation,
         failed_cases: allResults
           .filter((r) => r.status !== "PASSED")
           .map((r) => ({

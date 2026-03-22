@@ -22,22 +22,8 @@
         </button>
       </div>
 
-      <!-- 标签栏 -->
-      <div class="tab-bar">
-        <button
-          class="tab-btn"
-          :class="{ active: activeTab === 'tasks' }"
-          @click="switchToTasks()"
-        >任务</button>
-        <button
-          class="tab-btn"
-          :class="{ active: activeTab === 'downloads' }"
-          @click="switchToDownloads"
-        >下载</button>
-      </div>
-
       <!-- ─── 任务树模式 ─── -->
-      <div v-if="activeTab === 'tasks' && displayMode === 'tree'" class="scroll-area">
+      <div v-if="displayMode === 'tree'" class="scroll-area">
         <div class="tree-container">
           <TaskNodeItem
             v-for="nodeId in rootTaskIds"
@@ -55,7 +41,7 @@
       </div>
 
       <!-- ─── 旧 Phase 模式（向后兼容）─── -->
-      <div v-else-if="activeTab === 'tasks' && displayMode === 'legacy' && legacyPlan" class="scroll-area">
+      <div v-else-if="displayMode === 'legacy' && legacyPlan" class="scroll-area">
         <div class="phases-container">
           <div
             v-for="(phase, index) in legacyPlan.phases"
@@ -103,45 +89,47 @@
         </div>
       </div>
 
-      <!-- ─── 任务空状态 ─── -->
-      <div v-else-if="activeTab === 'tasks'" class="scroll-area">
-        <div class="tasks-empty">本次会话暂无任务记录</div>
+      <!-- ─── 阶段进度模式 ─── -->
+      <div v-else-if="displayMode === 'stages'" class="scroll-area">
+        <div class="phases-container">
+          <div
+            v-for="(stage, index) in stages"
+            :key="stage.name"
+            class="phase-item"
+            :class="{
+              'status-active': stage.status === 'running',
+              'status-completed': stage.status === 'done',
+              'status-failed': stage.status === 'failed',
+            }"
+          >
+            <div class="phase-timeline">
+              <div class="status-icon-wrapper">
+                <span v-if="stage.status === 'done'" class="status-icon completed">✓</span>
+                <span v-else-if="stage.status === 'running'" class="status-icon active">
+                  <span class="pulse-ring"></span>
+                </span>
+                <span v-else-if="stage.status === 'failed'" class="status-icon failed">✗</span>
+                <span v-else class="status-icon pending">○</span>
+              </div>
+              <div v-if="index < stages.length - 1" class="timeline-line"></div>
+            </div>
+            <div class="phase-content">
+              <div class="phase-header-row">
+                <span class="phase-name" :class="{ 'is-strikethrough': stage.status === 'done' }">{{ stage.name }}</span>
+              </div>
+              <div v-if="stage.detail" class="stage-detail">{{ stage.detail }}</div>
+            </div>
+          </div>
+        </div>
+        <div v-if="isAllCompleted" class="completion-banner">
+          <el-icon class="completion-icon"><CircleCheckFilled /></el-icon>
+          <span>执行完成</span>
+        </div>
       </div>
 
-      <!-- ─── 下载标签页 ─── -->
-      <div v-if="activeTab === 'downloads'" class="scroll-area">
-        <div v-if="loadingFiles" class="download-loading">加载中...</div>
-        <div v-else-if="outputFiles.length === 0" class="download-empty">暂无可下载文件</div>
-        <div v-else class="download-list">
-          <!-- 全选 -->
-          <label class="select-all-label">
-            <input type="checkbox" @change="toggleAll" :checked="allSelected" />
-            <span>全选 ({{ outputFiles.length }} 个文件)</span>
-          </label>
-          <!-- 文件条目 -->
-          <div
-            v-for="f in outputFiles"
-            :key="f.name"
-            class="file-item"
-          >
-            <input
-              type="checkbox"
-              :value="f.name"
-              :checked="selectedFiles.has(f.name)"
-              @change="toggleFile(f.name)"
-            />
-            <span class="file-item-name" :title="f.name">{{ f.name }}</span>
-            <span class="file-item-size">{{ formatSize(f.size) }}</span>
-          </div>
-          <!-- 下载按钮 -->
-          <button
-            class="download-btn"
-            @click="downloadSelected"
-            :disabled="selectedFiles.size === 0"
-          >
-            下载选中 ({{ selectedFiles.size }})
-          </button>
-        </div>
+      <!-- ─── 任务空状态 ─── -->
+      <div v-else class="scroll-area">
+        <div class="tasks-empty">本次会话暂无任务记录</div>
       </div>
     </div>
 
@@ -149,7 +137,7 @@
     <div v-else class="panel-collapsed" @click="isExpanded = true">
       <div class="collapsed-content">
         <el-icon class="collapsed-icon"><Connection /></el-icon>
-        <!-- 有任务时显示进度环 -->
+        <!-- 进度环 -->
         <div v-if="totalCount > 0" class="collapsed-progress">
           <div class="progress-ring">
             <svg viewBox="0 0 36 36">
@@ -167,11 +155,6 @@
           </div>
           <span class="collapsed-label">/{{ totalCount }}</span>
         </div>
-        <!-- 无任务时显示下载文件数角标 -->
-        <div v-else class="collapsed-downloads">
-          <span class="collapsed-dl-count">{{ outputFiles.length }}</span>
-          <span class="collapsed-label">文件</span>
-        </div>
         <el-icon class="expand-arrow"><ArrowLeft /></el-icon>
       </div>
     </div>
@@ -180,6 +163,7 @@
 
 <script setup>
 import { h, ref, computed, watch, defineExpose, defineProps } from 'vue'
+
 import {
   Connection,
   ArrowRight,
@@ -187,7 +171,6 @@ import {
   UserFilled,
   CircleCheckFilled,
 } from '@element-plus/icons-vue'
-import { api } from '@/api'
 
 // ─── TaskNodeItem (递归子组件) ─────────────────────────────────────────────────
 // 使用 render 函数代替 template 字符串，避免 Vue 3 runtime-only 构建缺少模板编译器
@@ -278,15 +261,6 @@ const isExpanded = ref(true)
 // Display mode: 'none' | 'legacy' | 'tree'
 const displayMode = ref('none')
 
-// ── Tab state ──
-const activeTab = ref('tasks')
-
-// ── Downloads state ──
-const outputFiles = ref([])
-const selectedFiles = ref(new Set())
-const loadingFiles = ref(false)
-const loadingTaskTree = ref(false)
-
 // ── Legacy phase mode (backward compat) ──
 const legacyPlan = ref(null)
 const legacyActivePhase = ref(null)
@@ -296,11 +270,15 @@ const legacyCompletedPhases = ref([])
 const taskNodes = ref({})        // task_id → TaskNode
 const rootTaskIds = ref([])      // top-level task IDs (no parent)
 
+// ── Stages mode ──
+const stages = ref([])           // [{ name, status: 'running'|'done'|'failed', detail }]
+
 // ─── Visibility ──────────────────────────────────────────────────────────────
 
 const isVisible = computed(() => {
   if (displayMode.value === 'tree') return Object.keys(taskNodes.value).length > 0
   if (displayMode.value === 'legacy') return legacyPlan.value !== null
+  if (displayMode.value === 'stages') return stages.value.length > 0
   return false
 })
 
@@ -309,6 +287,7 @@ const isVisible = computed(() => {
 const totalCount = computed(() => {
   if (displayMode.value === 'tree') return Object.keys(taskNodes.value).length
   if (displayMode.value === 'legacy') return legacyPlan.value?.phases?.length || 0
+  if (displayMode.value === 'stages') return stages.value.length
   return 0
 })
 
@@ -317,6 +296,7 @@ const completedCount = computed(() => {
     return Object.values(taskNodes.value).filter(n => n.status === 'completed').length
   }
   if (displayMode.value === 'legacy') return legacyCompletedPhases.value.length
+  if (displayMode.value === 'stages') return stages.value.filter(s => s.status === 'done').length
   return 0
 })
 
@@ -327,11 +307,15 @@ const progressPercent = computed(() => {
 
 const isAllCompleted = computed(() => {
   if (totalCount.value === 0) return false
+  if (displayMode.value === 'stages') {
+    return stages.value.length > 0 && stages.value.every(s => s.status === 'done' || s.status === 'failed')
+  }
   return completedCount.value === totalCount.value
 })
 
 const truncatedObjective = computed(() => {
   if (displayMode.value === 'tree') return '任务树'
+  if (displayMode.value === 'stages') return '执行进度'
   const obj = legacyPlan.value?.objective || '执行计划'
   return obj.length <= 20 ? obj : obj.substring(0, 18) + '...'
 })
@@ -442,102 +426,23 @@ function reset() {
   legacyCompletedPhases.value = []
   taskNodes.value = {}
   rootTaskIds.value = []
-  activeTab.value = 'tasks'
-  outputFiles.value = []
-  selectedFiles.value = new Set()
+  stages.value = []
 }
 
-// ─── Downloads helpers ────────────────────────────────────────────────────────
+// ─── Stage update handler (called by ChatView for stage_update SSE events) ────
 
-const allSelected = computed(() => {
-  return outputFiles.value.length > 0 && selectedFiles.value.size === outputFiles.value.length
-})
-
-function toggleFile(name) {
-  const next = new Set(selectedFiles.value)
-  if (next.has(name)) {
-    next.delete(name)
+function handleStageUpdate(stageName, status, detail) {
+  if (!stageName) return
+  displayMode.value = 'stages'
+  const existing = stages.value.find(s => s.name === stageName)
+  if (existing) {
+    existing.status = status
+    if (detail) existing.detail = detail
   } else {
-    next.add(name)
-  }
-  selectedFiles.value = next
-}
-
-function toggleAll(event) {
-  if (event.target.checked) {
-    selectedFiles.value = new Set(outputFiles.value.map(f => f.name))
-  } else {
-    selectedFiles.value = new Set()
+    stages.value.push({ name: stageName, status, detail: detail || '' })
   }
 }
 
-function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-async function loadOutputFiles() {
-  if (!props.conversationId) return
-  loadingFiles.value = true
-  try {
-    const res = await api.get(`/conversations/${props.conversationId}/outputs`)
-    outputFiles.value = res.data ?? []
-  } catch (e) {
-    console.warn('加载输出文件失败:', e)
-    outputFiles.value = []
-  } finally {
-    loadingFiles.value = false
-  }
-}
-
-function switchToDownloads() {
-  activeTab.value = 'downloads'
-  loadOutputFiles()
-}
-
-async function loadTaskTree() {
-  if (!props.conversationId) return
-  loadingTaskTree.value = true
-  try {
-    const res = await api.get(`/conversations/${props.conversationId}/task-tree`)
-    const nodes = res.data?.nodes ?? []
-    if (nodes.length > 0) {
-      displayMode.value = 'tree'
-      rebuildFromSnapshot(nodes)
-    }
-  } catch (e) {
-    console.warn('加载任务树失败:', e)
-  } finally {
-    loadingTaskTree.value = false
-  }
-}
-
-function switchToTasks() {
-  activeTab.value = 'tasks'
-  loadTaskTree()
-}
-
-async function downloadSelected() {
-  if (!props.conversationId) return
-  for (const name of selectedFiles.value) {
-    try {
-      const url = `/conversations/${props.conversationId}/outputs/${encodeURIComponent(name)}`
-      const resp = await api.get(url, { responseType: 'blob' })
-      const blob = resp instanceof Blob ? resp : new Blob([resp])
-      const objectUrl = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = objectUrl
-      link.download = name
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(objectUrl)
-    } catch (e) {
-      console.warn(`下载 ${name} 失败:`, e)
-    }
-  }
-}
 
 // ─── Legacy phase helpers ────────────────────────────────────────────────────
 
@@ -563,19 +468,12 @@ watch(isAllCompleted, (val) => {
   if (val) isExpanded.value = true
 })
 
-// ─── Auto-load downloads when conversation changes ────────────────────────────
-
-watch(() => props.conversationId, (newId) => {
-  if (newId) {
-    loadOutputFiles()
-    loadTaskTree()
-  }
-}, { immediate: true })
 
 // ─── Expose ──────────────────────────────────────────────────────────────────
 
 defineExpose({
   handleCoordinatorEvent,
+  handleStageUpdate,
   reset,
   isExpanded: computed(() => isExpanded.value),
 })
@@ -584,15 +482,11 @@ defineExpose({
 <style scoped>
 /* ══════════ Container ══════════ */
 .task-tree-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: calc(100vh - 140px) !important;
-  max-height: calc(100vh - 140px) !important;
+  height: 100%;
+  flex-shrink: 0;
   background: var(--sidebar-bg, #f7f8fc);
   border-left: 1px solid var(--border-color, #e5e5e5);
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
-  z-index: 100;
   display: flex;
   flex-direction: column;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -674,121 +568,6 @@ defineExpose({
   color: var(--text-primary, #1a1a1a);
 }
 
-/* ══════════ Tab bar ══════════ */
-.tab-bar {
-  display: flex;
-  border-bottom: 1px solid var(--border-color, #e5e5e5);
-  background: var(--main-bg, #ffffff);
-  flex-shrink: 0;
-}
-
-.tab-btn {
-  flex: 1;
-  padding: 8px 0;
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary, #666);
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s;
-}
-
-.tab-btn.active {
-  color: var(--send-btn, #615ced);
-  border-bottom-color: var(--send-btn, #615ced);
-}
-
-.tab-btn:hover:not(.active) {
-  color: var(--text-primary, #1a1a1a);
-  background: rgba(0, 0, 0, 0.03);
-}
-
-/* ══════════ Downloads panel ══════════ */
-.download-loading,
-.download-empty {
-  text-align: center;
-  padding: 32px 16px;
-  font-size: 13px;
-  color: var(--text-secondary, #999);
-}
-
-.download-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.select-all-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: var(--main-bg, #fff);
-  border: 1px solid var(--border-color, #e5e5e5);
-  font-size: 12px;
-  color: var(--text-secondary, #666);
-  cursor: pointer;
-}
-
-.select-all-label input[type="checkbox"] {
-  cursor: pointer;
-}
-
-.file-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  background: var(--main-bg, #fff);
-  border: 1px solid var(--border-color, #e5e5e5);
-}
-
-.file-item input[type="checkbox"] {
-  flex-shrink: 0;
-  cursor: pointer;
-}
-
-.file-item-name {
-  flex: 1;
-  font-size: 12px;
-  color: var(--text-primary, #1a1a1a);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: monospace;
-}
-
-.file-item-size {
-  font-size: 11px;
-  color: var(--text-secondary, #999);
-  flex-shrink: 0;
-}
-
-.download-btn {
-  margin-top: 4px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
-  background: var(--send-btn, #615ced);
-  color: white;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s, opacity 0.2s;
-}
-
-.download-btn:hover:not(:disabled) {
-  background: var(--send-btn-hover, #4f4bcc);
-}
-
-.download-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 /* ══════════ Scroll area ══════════ */
 .scroll-area {
@@ -936,20 +715,6 @@ defineExpose({
   color: var(--text-secondary, #999);
 }
 
-/* ══════════ Collapsed downloads badge ══════════ */
-.collapsed-downloads {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.collapsed-dl-count {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--send-btn, #615ced);
-  line-height: 1;
-}
 
 /* ══════════ Legacy phase styles (reused from CoordinatorPlanCard) ══════════ */
 .phases-container { display: flex; flex-direction: column; gap: 0; }
@@ -992,9 +757,17 @@ defineExpose({
   height: 20px;
 }
 
-.status-icon.pending { color: var(--text-secondary, #999); font-size: 16px; }
-.status-icon.active  { color: #409eff; position: relative; }
+.status-icon.pending   { color: var(--text-secondary, #999); font-size: 16px; }
+.status-icon.active    { color: #409eff; position: relative; }
 .status-icon.completed { color: #67c23a; font-size: 16px; }
+.status-icon.failed    { color: #f56c6c; font-size: 16px; }
+
+.stage-detail {
+  font-size: 11px;
+  color: var(--text-secondary, #999);
+  margin-top: 2px;
+  line-height: 1.4;
+}
 
 .timeline-line {
   width: 2px;

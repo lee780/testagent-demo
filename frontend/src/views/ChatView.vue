@@ -182,13 +182,13 @@
                     </template>
 
                     <!-- 执行完成报告卡片 -->
-                    <div v-if="msg.reportCard" class="report-ready-card">
-                      <div class="rrc-icon">📋</div>
+                    <div v-if="msg.reportId" class="report-ready-card">
+                      <div class="rrc-icon">📊</div>
                       <div class="rrc-body">
-                        <div class="rrc-title">测试执行完成</div>
-                        <div class="rrc-desc">已生成 {{ msg.reportCard.files.length }} 个 HTML 文件，点击保存到报告库后可管理用例入库</div>
+                        <div class="rrc-title">测试报告已生成</div>
+                        <div class="rrc-desc">报告已自动保存，可查看详情、入库用例、创建缺陷</div>
                       </div>
-                      <router-link to="/reports" class="rrc-btn">报告库 →</router-link>
+                      <router-link :to="`/reports/${msg.reportId}`" class="rrc-btn">查看报告 →</router-link>
                     </div>
 
                     <!-- 实时测试进度块 -->
@@ -278,12 +278,6 @@
             </div>
           </div>
 
-          <!-- 计划步骤展示组件 -->
-          <PlanStepBar :planData="currentPlanData" />
-
-          <!-- 生成文件下载面板（嵌入式折叠） -->
-          <FileDownloadPanel ref="downloadPanel" :conversation-id="currentConversationId" :execution-mode="currentMode" />
-
           <div class="bottom-input-wrapper">
             <div class="bottom-input-container">
               <!-- 文件预览区 -->
@@ -362,6 +356,12 @@
       </div>
     </main>
 
+    <!-- 右侧进度面板（flex 内联，常驻可折叠） -->
+    <TaskTreePanel
+      ref="taskPanelRef"
+      :conversation-id="currentConversationId || ''"
+    />
+
     <!-- 隐藏的文件上传 input -->
     <input
       type="file"
@@ -380,9 +380,8 @@ import api from '@/api'
 import { useChatStore } from '@/stores/chat'
 
 import MarkdownViewer from '@/components/MarkdownViewer.vue'
-import PlanStepBar from '@/components/PlanStepBar.vue'
 import ToolCallCard from '@/components/ToolCallCard.vue'
-import FileDownloadPanel from '@/components/FileDownloadPanel.vue'
+import TaskTreePanel from '@/components/TaskTreePanel.vue'
 import { SSEParser } from '@/utils/sse-parser.js'
 
 const chatStore = useChatStore()
@@ -395,6 +394,9 @@ const {
 const { loadConversations, startNewChat, setConversationMode, getConversationMode } = chatStore
 
 const inputMessage = ref('')
+
+// 右侧进度面板 ref
+const taskPanelRef = ref(null)
 
 // 当前正在执行的 reply_id，用于终止
 const currentReplyId = ref(null)
@@ -446,9 +448,6 @@ const inputTextarea = ref(null)
 const bottomInputTextarea = ref(null)
 const messagesContainer = ref(null)
 
-const currentPlanData = ref(null)
-
-const downloadPanel = ref(null)
 
 const hasMessages = computed(() => messages.value.length > 0)
 
@@ -488,13 +487,14 @@ const loadPresets = async () => {
 // 监听当前对话变化，加载消息和计划
 watch(currentConversationId, async (newId) => {
   if (!isSending.value) loading.value = false // 切换对话时清除非当前对话的 loading 状态
+  taskPanelRef.value?.reset() // 切换对话时重置进度面板
   if (isSending.value) return // 如果正在发送中，不触发自动加载，避免覆盖本地正在生成的流
 
   if (newId) {
     try {
-      const messagesData = await api.listMessages(newId, { limit: 1000 })
+      const messagesData = await api.listMessages(newId, { limit: 200 })
 
-      // 加载消息（从 metadata 恢复 events）
+      // 加载消息（从 metadata 恢复 events，并还原报告卡片）
       messages.value = messagesData.map(msg => {
         const baseMsg = {
           role: msg.role,
@@ -502,12 +502,29 @@ watch(currentConversationId, async (newId) => {
         }
         if (msg.role === 'assistant' && msg.metadata?.events) {
           baseMsg.events = msg.metadata.events
+          // Restore reportId from run_test_suite tool_result
+          const reportResult = msg.metadata.events.find(
+            e => e.type === 'tool_result' && e.name === 'run_test_suite' && e.success
+          )
+          if (reportResult) {
+            const reportId = reportResult.output?.details?.report_id
+            if (reportId) baseMsg.reportId = reportId
+          }
         }
         return baseMsg
       })
 
       await nextTick()
       scrollToBottom(true)
+
+      // 回放阶段进度历史
+      try {
+        const stagesData = await api.getConversationStages(newId)
+        const stages = stagesData?.stages ?? []
+        stages.forEach(s => taskPanelRef.value?.handleStageUpdate(s.name, s.status, s.detail))
+      } catch {
+        // 静默失败，历史进度不影响主功能
+      }
     } catch (error) {
       console.error('加载对话消息失败:', error)
     }
@@ -683,8 +700,6 @@ const sendMessage = async () => {
           if (parsed.reply_id) {
             currentReplyId.value = parsed.reply_id
           }
-        } else if (parsed.type === 'plan_update' && parsed.data) {
-          currentPlanData.value = parsed.data
         } else if (parsed.type === 'testcases' && parsed.data) {
           const testcasesData = parsed.data
           if (!msg.testcases) {
@@ -721,6 +736,11 @@ const sendMessage = async () => {
               success: parsed.success,
             })
           }
+          // Extract report_id when run_test_suite completes
+          if (parsed.name === 'run_test_suite' && parsed.success) {
+            const reportId = parsed.output?.details?.report_id
+            if (reportId) msg.reportId = reportId
+          }
         } else if (parsed.type === 'test_progress') {
           if (!msg.testProgress) {
             msg.testProgress = { current: 0, total: parsed.total, passed: 0, failed: 0, cases: [] }
@@ -730,6 +750,8 @@ const sendMessage = async () => {
           msg.testProgress.passed = parsed.passed
           msg.testProgress.failed = parsed.failed
           msg.testProgress.cases.push({ id: parsed.case_id, status: parsed.status })
+        } else if (parsed.type === 'stage_update') {
+          taskPanelRef.value?.handleStageUpdate(parsed.stage, parsed.status, parsed.detail)
         } else if (parsed.type === 'title_generated') {
           chatStore.updateConversationTitle(parsed.conversation_id, parsed.title)
         } else if (parsed.type === 'error') {
@@ -772,24 +794,6 @@ const sendMessage = async () => {
     loading.value = false
     isSending.value = false
     currentReplyId.value = null
-    // Refresh download panel after every agent response
-    downloadPanel.value?.refresh()
-    // Show "report ready" card in chat if HTML files were generated
-    try {
-      const convId = currentConversationId.value
-      if (convId) {
-        const token = localStorage.getItem('access_token')
-        const res = await fetch(`/api/conversations/${convId}/outputs`, { headers: { Authorization: `Bearer ${token}` } })
-        const data = await res.json()
-        const htmlFiles = (data.data || []).filter(f => f.name.toLowerCase().endsWith('.html'))
-        if (htmlFiles.length > 0) {
-          const lastMsg = messages.value[messages.value.length - 1]
-          if (lastMsg?.role === 'assistant') {
-            lastMsg.reportCard = { convId, files: htmlFiles }
-          }
-        }
-      }
-    } catch {}
   }
 }
 

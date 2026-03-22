@@ -431,3 +431,44 @@ export async function getTaskTreeSnapshot(
 
   return { nodes: Object.values(nodes) };
 }
+
+// ── getStagesSnapshot ─────────────────────────────────────
+
+export async function getStagesSnapshot(
+  conversationId: string,
+  userId: string
+): Promise<{ stages: Array<{ name: string; status: string; detail: string }> }> {
+  const prisma = getPrisma();
+
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+  });
+  if (!conversation) throw new NotFoundError('对话');
+  if (conversation.userId !== userId) throw new ForbiddenError('无权访问');
+
+  const messages = await prisma.message.findMany({
+    where: { conversationId },
+    orderBy: { createdAt: 'asc' },
+    select: { metadata: true },
+  });
+
+  // Replay stage_update events in order to reconstruct final stage states
+  const stageMap = new Map<string, { name: string; status: string; detail: string }>();
+  for (const msg of messages) {
+    const meta = msg.metadata as Record<string, unknown> | null;
+    const events = meta?.events;
+    if (!Array.isArray(events)) continue;
+    for (const e of events) {
+      const ev = e as Record<string, unknown>;
+      if (ev.type === 'stage_update' && typeof ev.stage === 'string') {
+        stageMap.set(ev.stage, {
+          name: ev.stage,
+          status: (ev.status as string) ?? 'pending',
+          detail: (ev.detail as string) ?? '',
+        });
+      }
+    }
+  }
+
+  return { stages: Array.from(stageMap.values()) };
+}

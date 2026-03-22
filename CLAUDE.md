@@ -170,6 +170,12 @@ AGENT_OUTPUT_DIR=.testagent/workspace/outputs
 └── test_cases_raw.json        # 原始用例 JSON（用于手动入库）
 ```
 
+### 测试报告自动创建
+- `run_test_suite` 执行完成后，自动在 DB 创建 `TestReport` 记录（无需用户手动保存）
+- 报告名称格式：`{suiteName} [模式中文名] MM-DD`，例如 `信用评分接口测试 [系统化] 03-22`
+- `executionResults`（每条用例执行结果）和 `testCasesData`（原始用例 YAML）直接存入 DB
+- `casesImported` 初始为 `false`，用户在报告详情页手动确认入库后变为 `true`
+
 ### 文件下载/预览
 - 下载接口：`GET /api/conversations/:id/outputs/:filename`
 - 服务端固定返回 `Content-Type: application/octet-stream`
@@ -191,15 +197,18 @@ AGENT_OUTPUT_DIR=.testagent/workspace/outputs
 | POST | `/api/chat/upload` | 上传文件到对话 |
 | GET | `/api/conversations` | 对话列表 |
 | PUT | `/api/conversations/:id` | 更新对话标题 |
-| GET | `/api/conversations/:id/outputs` | 列出输出文件 |
+| GET | `/api/conversations/:id/uploads` | 列出用户上传的业务文档（从磁盘读，重启安全） |
+| GET | `/api/conversations/:id/outputs` | 列出 Agent 产出文件 |
 | GET | `/api/conversations/:id/outputs/:filename` | 下载文件 |
-| POST | `/api/reports` | 保存报告到报告库 |
-| GET | `/api/reports` | 报告列表 |
-| GET | `/api/reports/:id` | 报告详情 |
+| POST | `/api/reports` | 手动保存报告（Agent 执行完成后自动创建，此接口用于补录） |
+| GET | `/api/reports` | 报告列表（支持 `mode` 过滤、分页） |
+| GET | `/api/reports/:id` | 报告详情（含 executionResults、testCasesData、testCases） |
 | PUT | `/api/reports/:id` | 更新报告名称/关联文档 |
+| DELETE | `/api/reports/:id` | 删除报告（自动 null 关联的 TestCase.reportId 和 Defect.reportId） |
 | GET | `/api/reports/:id/html` | 获取 HTML 内容 |
-| POST | `/api/reports/:id/import` | 确认用例入库 |
-| GET | `/api/defects` | 缺陷列表（支持 status/severity/reportId 过滤） |
+| POST | `/api/reports/:id/import` | 确认用例入库（body 可选 `{ caseIds: string[] }` 用于部分入库） |
+| GET | `/api/defects` | 缺陷列表（支持 status/severity/reportId 过滤、分页） |
+| GET | `/api/defects/stats` | 缺陷全局统计（按 status/severity 分组，不受分页限制） |
 | POST | `/api/defects` | 创建缺陷 |
 | GET | `/api/defects/:id` | 缺陷详情（含评论） |
 | PATCH | `/api/defects/:id/status` | 更新缺陷状态（待处理/处理中/已解决/已关闭/不修复） |
@@ -255,6 +264,14 @@ Agent 支持 4 种测试模式（通过 `mode` 参数传入）：
 | BUG-001 | 高危 | 注销后 Token 仍有效（`auth.ts` `if (sessionData)` 跳过 JTI 校验） | **已修复**（v2.0 测试验证） |
 | BUG-002 | 高危 | 修改密码后旧 Token 是否仍有效 — 同上根因，未专项测试 | 待验证 |
 | BUG-003 | 中 | 注销接口携带空 JSON body 返回 500 | **已修复**（v2.0 测试验证） |
+
+## 可靠性与安全加固（v2.3）
+
+- **SSE 启动检查**：若 `SSE_HEARTBEAT_INTERVAL_MS ≥ SSE_IDLE_TIMEOUT_MS`，服务启动时抛出异常（fail-fast）
+- **路径安全**：文件下载接口改用 `path.relative()` 检测路径穿越，替代 `startsWith()` 判断
+- **消息历史限制**：对话消息加载上限 200 条（原 1000 条），防止大型对话内存溢出
+- **复合索引**：`Conversation` 表新增 `@@index([userId, updatedAt])` 支持高效排序查询
+- **入库事务**：`importTestCases()` 每条用例包裹在 `prisma.$transaction()` 中，group+case+latestId 原子完成
 
 ---
 

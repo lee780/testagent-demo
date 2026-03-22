@@ -7,7 +7,7 @@ const createSchema = z.object({
   name: z.string().min(1),
   conversationId: z.string().min(1),
   executionMode: z.string().optional(),
-  htmlFile: z.string().min(1),
+  htmlFile: z.string().optional(),
   uploadedDocs: z.array(z.string()).optional(),
 });
 
@@ -20,14 +20,15 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
     return { success: true, data: report };
   });
 
-  // GET /api/reports — list (paginated)
+  // GET /api/reports — list (paginated, optional mode filter)
   app.get('/api/reports', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
     const userId = request.currentUser!.user_id;
-    const { page, pageSize } = request.query as { page?: string; pageSize?: string };
+    const { page, pageSize, mode } = request.query as { page?: string; pageSize?: string; mode?: string };
     const reports = await reportService.listReports(
       userId,
       page ? parseInt(page, 10) : undefined,
       pageSize ? parseInt(pageSize, 10) : undefined,
+      mode,
     );
     return { success: true, data: reports };
   });
@@ -55,9 +56,22 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
   app.post('/api/reports/:id/import', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     const userId = request.currentUser!.user_id;
     const { id } = request.params as { id: string };
+    const body = request.body as { caseIds?: string[] } | undefined;
     try {
-      const result = await reportService.importTestCases(id, userId);
+      const result = await reportService.importTestCases(id, userId, body?.caseIds);
       return { success: true, data: result };
+    } catch (err: any) {
+      return reply.status(400).send({ success: false, error: err.message });
+    }
+  });
+
+  // DELETE /api/reports/:id
+  app.delete('/api/reports/:id', { preHandler: [authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const userId = request.currentUser!.user_id;
+    const { id } = request.params as { id: string };
+    try {
+      await reportService.deleteReport(id, userId);
+      return { success: true };
     } catch (err: any) {
       return reply.status(400).send({ success: false, error: err.message });
     }

@@ -33,6 +33,12 @@ const HEARTBEAT_INTERVAL_MS = parseInt(process.env.SSE_HEARTBEAT_INTERVAL_MS ?? 
 // Configurable via SSE_IDLE_TIMEOUT_MS env var; default 120 s.
 const IDLE_TIMEOUT_MS = parseInt(process.env.SSE_IDLE_TIMEOUT_MS ?? '120000', 10);
 
+if (HEARTBEAT_INTERVAL_MS >= IDLE_TIMEOUT_MS) {
+  throw new Error(
+    `SSE misconfiguration: HEARTBEAT_INTERVAL_MS (${HEARTBEAT_INTERVAL_MS}) must be less than IDLE_TIMEOUT_MS (${IDLE_TIMEOUT_MS})`
+  );
+}
+
 const HEARTBEAT_ITEM = { type: 'heartbeat' } as const;
 
 class AsyncQueue<T> {
@@ -195,6 +201,7 @@ ${message}`;
     conversationId,
     outputDir: config.agentOutputDir,
     mode,
+    uploadedFiles: uploadedFiles && uploadedFiles.length > 0 ? uploadedFiles : undefined,
     onEvent: (event) => {
       // event is SSEEvent { type, data } from the bridge.
       // Map bridge types → frontend types that ChatView.vue expects.
@@ -210,6 +217,8 @@ ${message}`;
         queue.push({ type: 'tool_result', id: d.tool_call_id, name: d.tool_name, output: d.result, success: !d.is_error });
       } else if (t === 'coordinator_event') {
         queue.push(d as Record<string, unknown>);
+      } else if (t === 'stage_update') {
+        queue.push({ type: 'stage_update', ...d });
       } else if (t === 'test_progress') {
         queue.push({ type: 'test_progress', ...d });
       }
@@ -315,6 +324,13 @@ function collectForPersistence(
         data: (event.data ?? {}) as Record<string, unknown>,
       });
     }
+  } else if (type === 'stage_update') {
+    assistantEvents.push({
+      type: 'stage_update',
+      stage: event.stage,
+      status: event.status,
+      detail: event.detail,
+    });
   }
 }
 

@@ -24,30 +24,6 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/api-test',
-      name: 'api-test',
-      component: () => import('../views/HomeView.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/tasks',
-      name: 'tasks',
-      component: () => import('../views/TasksView.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/tasks/:id',
-      name: 'task-detail',
-      component: () => import('../views/TaskDetailView.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
-      path: '/statistics',
-      name: 'statistics',
-      component: () => import('../views/StatisticsView.vue'),
-      meta: { requiresAuth: true }
-    },
-    {
       path: '/settings',
       name: 'settings',
       component: () => import('../views/SettingsView.vue'),

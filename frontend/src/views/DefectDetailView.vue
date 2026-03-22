@@ -9,7 +9,11 @@
       <!-- 左侧主内容 -->
       <div class="main-content">
         <div class="defect-title">{{ defect.title }}</div>
-        <div class="defect-desc">{{ defect.description || '暂无描述' }}</div>
+        <div class="defect-desc">{{ userDescription || '暂无描述' }}</div>
+        <div v-if="execLog" class="exec-log-section">
+          <div class="exec-log-title">执行日志</div>
+          <pre class="exec-log-pre">{{ execLog }}</pre>
+        </div>
 
         <!-- 评论区 -->
         <div class="comments-section">
@@ -45,9 +49,13 @@
           <div class="prop-label">创建时间</div>
           <span class="prop-value">{{ formatTime(defect.createdAt) }}</span>
         </div>
+        <div v-if="defect.resolvedAt" class="prop-group">
+          <div class="prop-label">解决时间</div>
+          <span class="prop-value">{{ formatTime(defect.resolvedAt) }}</span>
+        </div>
         <div v-if="defect.report" class="prop-group">
           <div class="prop-label">关联报告</div>
-          <router-link :to="`/reports`" class="prop-link">{{ defect.report.name }}</router-link>
+          <router-link :to="`/reports/${defect.reportId}`" class="prop-link">{{ defect.report.name }}</router-link>
         </div>
         <div v-if="defect.testCase" class="prop-group">
           <div class="prop-label">关联用例</div>
@@ -61,7 +69,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
@@ -73,6 +81,18 @@ const defect = ref(null)
 const loading = ref(false)
 const commentText = ref('')
 const commenting = ref(false)
+
+const LOG_SEPARATOR = '\n\n## 执行日志\n'
+const userDescription = computed(() => {
+  const desc = defect.value?.description || ''
+  const idx = desc.indexOf(LOG_SEPARATOR)
+  return idx >= 0 ? desc.slice(0, idx) : desc
+})
+const execLog = computed(() => {
+  const desc = defect.value?.description || ''
+  const idx = desc.indexOf(LOG_SEPARATOR)
+  return idx >= 0 ? desc.slice(idx + LOG_SEPARATOR.length) : ''
+})
 
 function severityType(s) { return SEVERITY_TYPES[s] || '' }
 function formatTime(ts) {
@@ -172,8 +192,33 @@ onMounted(fetchDefect)
 .defect-desc {
   color: var(--text-secondary);
   font-size: 14px;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
   white-space: pre-wrap;
+}
+.exec-log-section {
+  margin-bottom: 24px;
+}
+.exec-log-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.exec-log-pre {
+  background: #f5f6fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #444;
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 300px;
+  overflow-y: auto;
+  margin: 0;
 }
 .section-title {
   font-size: 14px;

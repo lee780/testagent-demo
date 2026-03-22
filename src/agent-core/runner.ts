@@ -48,6 +48,8 @@ export interface RunTestAgentParams {
   outputDir?: string;
   /** Test mode — controls which system prompt and behavior to use. */
   mode?: TestMode;
+  /** Uploaded input file names (business rule docs) for this conversation. */
+  uploadedFiles?: string[];
   /** Custom instructions to append to system prompt. */
   customInstructions?: string;
   /** SSE event callback. */
@@ -86,9 +88,15 @@ export async function runTestAgent(params: RunTestAgentParams): Promise<RunTestA
     userId: params.userId,
     conversationId: params.conversationId,
     outputDir: params.outputDir,
+    mode: params.mode,
+    uploadedFiles: params.uploadedFiles,
     onProgress: (event) => params.onEvent({
       type: 'test_progress',
       data: { ...event },
+    }),
+    onStageUpdate: (stage, status, detail) => params.onEvent({
+      type: 'stage_update',
+      data: { stage, status, detail: detail ?? '' },
     }),
   });
 

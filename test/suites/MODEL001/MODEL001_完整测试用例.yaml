@@ -1,0 +1,1049 @@
+# MODEL_001 授信额度测算 — 完整接口测试用例
+# 基于等价类划分和边界值分析生成
+# 覆盖所有因子组合：user_level × monthly_salary × social_security_flag × avg_3m_balance
+
+suite:
+  id: SUITE_MODEL001_COMPLETE
+  name: MODEL_001 授信额度模型完整测试
+  model_id: MODEL_001
+  endpoint: /mock/model/score
+  method: POST
+  content_type: application/xml
+
+test_cases:
+
+  # ════════════════════════════════════════════════════════════
+  # S01: 正常流程 - 基础准入场景
+  # ════════════════════════════════════════════════════════════
+  
+  - id: TC_MODEL001_S01
+    name: "正常准入 - 正资产 - 系数 2.3"
+    category: 正常流程
+    priority: P0
+    coverage_point: "决策规则覆盖/准入条件/满足准入 - 正资产系数 2.3"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S01"
+          user_level: 3
+        account_balance:
+          user_id: "TC_S01"
+          avg_3m_balance: 5000.00
+        cgs_social_security:
+          user_id: "TC_S01"
+          social_security_flag: 1
+        salary_summary:
+          user_id: "TC_S01"
+          monthly_salary: 15000.00
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S01</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S01</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: 准入（工资 15000>10000 且 有社保）
+      - path: "//credit_limit"
+        op: eq
+        value: "517500.00"
+        desc: "额度=3×(5000÷1000)×15000×2.3=517500.00"
+    notes: "核心正常流程：准入 + 正资产 + 系数 2.3"
+
+  - id: TC_MODEL001_S01_VARIANT
+    name: "正常准入 - 高资产高薪资 - 大额授信"
+    category: 正常流程
+    priority: P1
+    coverage_point: "决策规则覆盖/准入条件/满足准入 - 高额授信场景"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S01_VAR"
+          user_level: 5
+        account_balance:
+          user_id: "TC_S01_VAR"
+          avg_3m_balance: 200000.00
+        cgs_social_security:
+          user_id: "TC_S01_VAR"
+          social_security_flag: 1
+        salary_summary:
+          user_id: "TC_S01_VAR"
+          monthly_salary: 50000.00
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S01_VAR</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S01_VAR</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: 准入
+      - path: "//credit_limit"
+        op: eq
+        value: "115000000.00"
+        desc: "额度=5×(200000÷1000)×50000×2.3=115000000.00"
+    notes: "高额资产和高额工资的大额授信场景"
+
+  # ════════════════════════════════════════════════════════════
+  # S02: 边界值分析 - 月薪边界
+  # ════════════════════════════════════════════════════════════
+  
+  - id: TC_MODEL001_S02
+    name: "边界值 - 月薪临界 10000（不准入）"
+    category: 边界值
+    priority: P0
+    coverage_point: "边界值分析/月薪/临界值-10000（严格大于才准入）"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S02"
+          user_level: 5
+        account_balance:
+          user_id: "TC_S02"
+          avg_3m_balance: 100000.00
+        cgs_social_security:
+          user_id: "TC_S02"
+          social_security_flag: 1
+        salary_summary:
+          user_id: "TC_S02"
+          monthly_salary: 10000.00
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S02</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S02</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: 工资=10000 不满足>10000，不准入
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+        desc: 不准入额度固定为 0.00
+    notes: "边界值：monthly_salary=10000（临界值，严格大于才准入）"
+
+  - id: TC_MODEL001_S03
+    name: "边界值 - 月薪临界 10001（准入）"
+    category: 边界值
+    priority: P0
+    coverage_point: "边界值分析/月薪/临界值+10001（刚刚准入）"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S03"
+          user_level: 3
+        account_balance:
+          user_id: "TC_S03"
+          avg_3m_balance: 5000.00
+        cgs_social_security:
+          user_id: "TC_S03"
+          social_security_flag: 1
+        salary_summary:
+          user_id: "TC_S03"
+          monthly_salary: 10001.00
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S03</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S03</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: 工资 10001>10000，刚刚满足准入
+      - path: "//credit_limit"
+        op: eq
+        value: "345034.50"
+        desc: "额度=3×(5000÷1000)×10001×2.3=345034.50"
+    notes: "边界值：monthly_salary=10001（刚超过临界值，准入）"
+
+  - id: TC_MODEL001_S04
+    name: "边界值 - 月薪极低值 1（准入门槛内最小）"
+    category: 边界值
+    priority: P1
+    coverage_point: "边界值分析/月薪/下界边界-1（但需结合社保判断）"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S04"
+          user_level: 1
+        account_balance:
+          user_id: "TC_S04"
+          avg_3m_balance: 1000.00
+        cgs_social_security:
+          user_id: "TC_S04"
+          social_security_flag: 0   # 无社保
+        salary_summary:
+          user_id: "TC_S04"
+          monthly_salary: 1.00     # 工资也低
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S04</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S04</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: 工资 1 不满足>10000，且无社保，双重不准入
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+        desc: 不准入额度为 0.00
+    notes: "边界值：月最低工资，无社保，明确不准入"
+
+  # ════════════════════════════════════════════════════════════
+  # S03: 边界值分析 - 余额边界
+  # ════════════════════════════════════════════════════════════
+  
+  - id: TC_MODEL001_S05
+    name: "边界值 - 余额恰好为 0（准入但系数 0.5）"
+    category: 边界值
+    priority: P0
+    coverage_point: "边界值分析/月均余额/临界值-0（刚好不大于 0）"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S05"
+          user_level: 2
+        account_balance:
+          user_id: "TC_S05"
+          avg_3m_balance: 0.00     # 恰好等于 0
+        cgs_social_security:
+          user_id: "TC_S05"
+          social_security_flag: 1
+        salary_summary:
+          user_id: "TC_S05"
+          monthly_salary: 20000.00
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S05</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S05</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: 工资 20000>10000 且有社保，准入
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+        desc: "额度=2×(0÷1000)×20000×0.5=0.00（余额 0 导致结果为 0）"
+    notes: "边界值：avg_3m_balance=0，准入但系数 0.5，结果仍为 0"
+
+  - id: TC_MODEL001_S06
+    name: "边界值 - 余额负数 -5000（额度归零）"
+    category: 边界值
+    priority: P0
+    coverage_point: "风险区域/负余额×系数计算/准入但负资产额度归零"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S06"
+          user_level: 1
+        account_balance:
+          user_id: "TC_S06"
+          avg_3m_balance: -5000.00  # 负数，系数取 0.5
+        cgs_social_security:
+          user_id: "TC_S06"
+          social_security_flag: 1
+        salary_summary:
+          user_id: "TC_S06"
+          monthly_salary: 15000.00
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S06</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S06</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: 满足准入条件
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+        desc: "1×(-5)×15000×0.5=-37500<0，归零=0.00"
+    notes: "准入但负资产：计算系数 0.5，结果为负数后归零"
+
+  # ════════════════════════════════════════════════════════════
+  # S04: 等价类 - 用户等级全覆盖
+  # ════════════════════════════════════════════════════════════
+  
+  - id: TC_MODEL001_S07
+    name: "等价类 - 用户等级 1（最低）"
+    category: 等价类
+    priority: P1
+    coverage_point: "等价类/用户等级/有效类/等级 1（最低）"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S07"
+          user_level: 1              # 最低等级
+        account_balance:
+          user_id: "TC_S07"
+          avg_3m_balance: 10000.00
+        cgs_social_security:
+          user_id: "TC_S07"
+          social_security_flag: 1
+        salary_summary:
+          user_id: "TC_S07"
+          monthly_salary: 20000.00
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S07</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S07</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: 工资 20000>10000 且有社保，准入
+      - path: "//credit_limit"
+        op: eq
+        value: "460000.00"
+        desc: "额度=1×(10000÷1000)×20000×2.3=460000.00"
+    notes: "等价类：user_level=1（最低有效等级）"
+
+  - id: TC_MODEL001_S08
+    name: "等价类 - 用户等级 3（中间值）"
+    category: 等价类
+    priority: P1
+    coverage_point: "等价类/用户等级/有效类/等级 3（中间）"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S08"
+          user_level: 3              # 中间等级
+        account_balance:
+          user_id: "TC_S08"
+          avg_3m_balance: 5000.00
+        cgs_social_security:
+          user_id: "TC_S08"
+          social_security_flag: 1
+        salary_summary:
+          user_id: "TC_S08"
+          monthly_salary: 15000.00
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S08</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S08</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: 准入
+      - path: "//credit_limit"
+        op: eq
+        value: "517500.00"
+        desc: "额度=3×(5000÷1000)×15000×2.3=517500.00"
+    notes: "等价类：user_level=3（中间等级），样例用例"
+
+  - id: TC_MODEL001_S09
+    name: "等价类 - 用户等级 5（最高）"
+    category: 等价类
+    priority: P1
+    coverage_point: "等价类/用户等级/有效类/等级 5（最高）"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S09"
+          user_level: 5              # 最高等级
+        account_balance:
+          user_id: "TC_S09"
+          avg_3m_balance: 10000.00
+        cgs_social_security:
+          user_id: "TC_S09"
+          social_security_flag: 1
+        salary_summary:
+          user_id: "TC_S09"
+          monthly_salary: 20000.00
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S09</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S09</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: 准入
+      - path: "//credit_limit"
+        op: eq
+        value: "2300000.00"
+        desc: "额度=5×(10000÷1000)×20000×2.3=2300000.00"
+    notes: "等价类：user_level=5（最高等级），验证等级乘数最大场景"
+
+  - id: TC_MODEL001_S10
+    name: "等价类 - 用户等级 2 和 4 中间值"
+    category: 等价类
+    priority: P2
+    coverage_point: "等价类/用户等级/有效类/等级 2 和 4（补充）"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S10"
+          user_level: 2              # 补充等级 2
+        account_balance:
+          user_id: "TC_S10"
+          avg_3m_balance: 10000.00
+        cgs_social_security:
+          user_id: "TC_S10"
+          social_security_flag: 1
+        salary_summary:
+          user_id: "TC_S10"
+          monthly_salary: 20000.00
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S10</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S10</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: 准入
+      - path: "//credit_limit"
+        op: eq
+        value: "920000.00"
+        desc: "额度=2×(10000÷1000)×20000×2.3=920000.00"
+    notes: "等价类：user_level=2（补充等级），验证等级线性关系"
+
+  # ════════════════════════════════════════════════════════════
+  # S05: 异常流程 - 准入条件不满足
+  # ════════════════════════════════════════════════════════════
+  
+  - id: TC_MODEL001_S11
+    name: "异常流程 - 无社保导致不准入"
+    category: 异常流程
+    priority: P0
+    coverage_point: "决策规则覆盖/准入条件/无社保 - 不满足准入"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S11"
+          user_level: 3
+        account_balance:
+          user_id: "TC_S11"
+          avg_3m_balance: 50000.00
+        cgs_social_security:
+          user_id: "TC_S11"
+          social_security_flag: 0   # 无社保 → 不满足准入条件
+        salary_summary:
+          user_id: "TC_S11"
+          monthly_salary: 30000.00
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S11</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S11</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: 无社保不满足准入条件
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+        desc: 不准入额度固定为 0.00"
+    notes: "异常流程：social_security_flag=0（无社保），即使工资满足条件也无法准入"
+
+  - id: TC_MODEL001_S12
+    name: "异常流程 - 有社保但工资不达标"
+    category: 异常流程
+    priority: P0
+    coverage_point: "决策规则覆盖/准入条件/工资不足 - 不满足准入"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S12"
+          user_level: 4
+        account_balance:
+          user_id: "TC_S12"
+          avg_3m_balance: 100000.00
+        cgs_social_security:
+          user_id: "TC_S12"
+          social_security_flag: 1   # 有社保
+        salary_summary:
+          user_id: "TC_S12"
+          monthly_salary: 5000.00   # 工资远低于 10000
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S12</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S12</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: 工资 5000 不满足>10000，不准入
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+        desc: 不准入额度固定为 0.00"
+    notes: "异常流程：工资不足，即使有社保也不准入"
+
+  - id: TC_MODEL001_S13
+    name: "异常流程 - 既无社保又工资不足（双不满足）"
+    category: 异常流程
+    priority: P2
+    coverage_point: "决策规则覆盖/准入条件/双条件不满足 - 最弱用户"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S13"
+          user_level: 1
+        account_balance:
+          user_id: "TC_S13"
+          avg_3m_balance: -10000.00
+        cgs_social_security:
+          user_id: "TC_S13"
+          social_security_flag: 0   # 无社保
+        salary_summary:
+          user_id: "TC_S13"
+          monthly_salary: 8000.00   # 工资也不够
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S13</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S13</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: 双条件不满足，明确不准入
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+        desc: 不准入额度为 0.00"
+    notes: "异常流程：双条件都不满足的最弱用户场景"
+
+  # ════════════════════════════════════════════════════════════
+  # S06: 风险区域 - 特殊余额情况
+  # ════════════════════════════════════════════════════════════
+  
+  - id: TC_MODEL001_S14
+    name: "风险区域 - 极小正余额（趋近于 0 的正数）"
+    category: 风险区域
+    priority: P2
+    coverage_point: "风险区域/微小正余额/精度边界-0.01"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S14"
+          user_level: 1
+        account_balance:
+          user_id: "TC_S14"
+          avg_3m_balance: 0.01      # 极小正数，大于 0，系数 2.3
+        cgs_social_security:
+          user_id: "TC_S14"
+          social_security_flag: 1
+        salary_summary:
+          user_id: "TC_S14"
+          monthly_salary: 10001.00  # 必须>10000 才准入
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S14</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S14</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: 准入（工资 10001>10000 且 有社保）
+      - path: "//credit_limit"
+        op: eq
+        value: "0.23"
+        desc: "额度=1×(0.01÷1000)×10001×2.3≈0.23（精确计算）"
+    notes: "风险区域：极小正余额 + 刚刚满足准入的工资"
+
+  - id: TC_MODEL001_S15
+    name: "风险区域 - 大额负余额"
+    category: 风险区域
+    priority: P2
+    coverage_point: "风险区域/大额负余额/极端负资产场景"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S15"
+          user_level: 5
+        account_balance:
+          user_id: "TC_S15"
+          avg_3m_balance: -1000000.00  # 大负数
+        cgs_social_security:
+          user_id: "TC_S15"
+          social_security_flag: 1
+        salary_summary:
+          user_id: "TC_S15"
+          monthly_salary: 50000.00
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S15</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S15</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: 准入（工资高且有社保）
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+        desc: "5×(-1000)×50000×0.5=-125000000<0，归零=0.00"
+    notes: "风险区域：大额负余额，即使高工资高额度也归零"
+
+  # ════════════════════════════════════════════════════════════
+  # S07: 综合场景 - 多因子组合
+  # ════════════════════════════════════════════════════════════
+  
+  - id: TC_MODEL001_S16
+    name: "综合场景 - 高等级高资产高工资（理想用户）"
+    category: 综合场景
+    priority: P1
+    coverage_point: "综合场景/全优因子/最高等级最优配置"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S16"
+          user_level: 5
+        account_balance:
+          user_id: "TC_S16"
+          avg_3m_balance: 500000.00
+        cgs_social_security:
+          user_id: "TC_S16"
+          social_security_flag: 1
+        salary_summary:
+          user_id: "TC_S16"
+          monthly_salary: 100000.00
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S16</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S16</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: 全优准入
+      - path: "//credit_limit"
+        op: eq
+        value: "575000000.00"
+        desc: "额度=5×(500000÷1000)×100000×2.3=575000000.00"
+    notes: "综合场景：全优用户的最大授信额度"
+
+  - id: TC_MODEL001_S17
+    name: "综合场景 - 中等等级中等资产中工资"
+    category: 综合场景
+    priority: P2
+    coverage_point: "综合场景/中等因子/典型用户场景"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_S17"
+          user_level: 3
+        account_balance:
+          user_id: "TC_S17"
+          avg_3m_balance: 30000.00
+        cgs_social_security:
+          user_id: "TC_S17"
+          social_security_flag: 1
+        salary_summary:
+          user_id: "TC_S17"
+          monthly_salary: 25000.00
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_S17</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_S17</sx_trace_id>
+            <corp_id></corp_id>
+            <corp_xy_num></corp_xy_num>
+            <person_idtype>1010</person_idtype>
+            <person_id></person_id>
+            <person_name>测试用户</person_name>
+            <bnk_no></bnk_no>
+            <cp_code>8890</cp_code>
+            <c_code>110110</c_code>
+            <p_code>110000</p_code>
+            <fr_psn_id></fr_psn_id>
+            <fr_psn_name></fr_psn_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+        desc: 接口调用成功
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: 准入
+      - path: "//credit_limit"
+        op: eq
+        value: "5175000.00"
+        desc: "额度=3×(30000÷1000)×25000×2.3=5175000.00"
+    notes: "综合场景：典型中等用户场景"

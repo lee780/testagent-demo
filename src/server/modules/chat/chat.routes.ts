@@ -146,6 +146,26 @@ export async function registerChatRoutes(app: FastifyInstance): Promise<void> {
     }
   );
 
+  // GET /api/conversations/:id/uploads — list input files uploaded by user to this conversation
+  app.get(
+    '/api/conversations/:id/uploads',
+    { preHandler: [authenticate] },
+    async (request: FastifyRequest, _reply: FastifyReply) => {
+      const userId = request.currentUser!.user_id;
+      const { id: convId } = request.params as { id: string };
+      const config = getConfig();
+      const uploadDir = path.join(config.storage.root, 'chat', userId, convId);
+
+      if (!fs.existsSync(uploadDir)) {
+        return { success: true, data: [] };
+      }
+
+      const entries = await fsPromises.readdir(uploadDir, { withFileTypes: true });
+      const files = entries.filter(e => e.isFile()).map(e => e.name);
+      return { success: true, data: files };
+    }
+  );
+
   // GET /api/conversations/:id/outputs — list output files for a conversation
   app.get(
     '/api/conversations/:id/outputs',
@@ -196,8 +216,9 @@ export async function registerChatRoutes(app: FastifyInstance): Promise<void> {
       const baseDir = path.resolve(path.join(outputDir, userId, convId));
       const filePath = path.resolve(path.join(baseDir, filename));
 
-      // Path security: ensure resolved path is within the user's conversation directory
-      if (!filePath.startsWith(baseDir + path.sep) && filePath !== baseDir) {
+      // Path security: relative path must not escape the base directory
+      const rel = path.relative(baseDir, filePath);
+      if (rel.startsWith('..') || path.isAbsolute(rel)) {
         return reply.code(403).send({ error: 'Forbidden' });
       }
 

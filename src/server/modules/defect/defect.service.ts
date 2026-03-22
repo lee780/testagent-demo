@@ -86,6 +86,22 @@ export async function updateDefectStatus(id: string, userId: string, status: str
   });
 }
 
+export async function getDefectStats(userId: string) {
+  const rows = await prisma.defect.groupBy({
+    by: ['status', 'severity'],
+    where: { createdBy: userId },
+    _count: { _all: true },
+  });
+  const stats: Record<string, number> = {};
+  let total = 0;
+  for (const r of rows) {
+    stats[`status_${r.status}`] = (stats[`status_${r.status}`] ?? 0) + r._count._all;
+    stats[`severity_${r.severity}`] = (stats[`severity_${r.severity}`] ?? 0) + r._count._all;
+    total += r._count._all;
+  }
+  return { total, ...stats };
+}
+
 export async function addComment(defectId: string, userId: string, content: string) {
   const defect = await prisma.defect.findFirst({ where: { id: defectId, createdBy: userId } });
   if (!defect) throw new Error('缺陷不存在');

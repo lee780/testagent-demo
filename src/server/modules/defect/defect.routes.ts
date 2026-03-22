@@ -21,6 +21,12 @@ const addCommentSchema = z.object({
 });
 
 export async function registerDefectRoutes(app: FastifyInstance): Promise<void> {
+  app.get('/api/defects/stats', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
+    const userId = request.currentUser!.user_id;
+    const stats = await defectService.getDefectStats(userId);
+    return { success: true, data: stats };
+  });
+
   app.get('/api/defects', { preHandler: [authenticate] }, async (request: FastifyRequest) => {
     const userId = request.currentUser!.user_id;
     const query = request.query as { status?: string; severity?: string; reportId?: string; page?: string; pageSize?: string };
