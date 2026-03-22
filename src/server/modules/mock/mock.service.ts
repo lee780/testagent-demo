@@ -1,4 +1,8 @@
 import { getPrisma } from '../../config/database.js';
+import { getLogger } from '../../config/logger.js';
+
+const logger = getLogger();
+const STUB_SERVER_URL = process.env.STUB_SERVER_URL ?? 'http://localhost:8002';
 
 export interface ScoreResult {
   resultCode: string;
@@ -7,18 +11,79 @@ export interface ScoreResult {
   creditLimit: string;
 }
 
+// ── 外部指标获取（HTTP 外呼挡板） ─────────────────────────
+
+/**
+ * 从挡板服务器获取所有已注册外部服务列表，并逐一外呼，合并返回体。
+ *
+ * C 系统不硬编码外部服务清单——调用哪些路径、返回哪些字段，
+ * 全部由测试 Agent 在执行前通过 /_admin/ext-services 动态注册。
+ */
+async function fetchExternalIndicators(userId: string): Promise<Record<string, any>> {
+  // 1. 拉取外部服务列表
+  let services: Array<{ name: string; path: string; method: string }>;
+  try {
+    const res = await fetch(`${STUB_SERVER_URL}/_admin/ext-services`, { signal: AbortSignal.timeout(3000) });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    services = await res.json() as any;
+  } catch (err: any) {
+    logger.warn({ err: err.message }, '[Mock] 挡板服务器不可达，外部指标为空');
+    return {};
+  }
+
+  if (services.length === 0) {
+    logger.warn('[Mock] 无已注册外部服务，外部指标为空');
+    return {};
+  }
+
+  // 2. 并行外呼所有注册的外部服务
+  const calls = services.map(async (svc) => {
+    const res = await fetch(`${STUB_SERVER_URL}${svc.path}`, {
+      method: svc.method.toUpperCase(),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId }),
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) throw new Error(`${svc.name} returned HTTP ${res.status}`);
+    return { name: svc.name, data: await res.json() as Record<string, any> };
+  });
+
+  const results = await Promise.allSettled(calls);
+
+  // 3. 合并所有成功响应（同名字段后者覆盖前者）
+  const merged: Record<string, any> = {};
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      Object.assign(merged, result.value.data);
+    } else {
+      logger.warn({ error: (result.reason as Error).message }, '[Mock] 外部服务外呼失败，跳过');
+    }
+  }
+
+  logger.info({ userId, fields: Object.keys(merged) }, '[Mock] 外部指标合并完成');
+  return merged;
+}
+
+// ── 核心计算 ──────────────────────────────────────────────
+
 export async function calculateCreditScore(userId: string): Promise<ScoreResult> {
   const db = getPrisma();
 
-  const [userInfo, accountBalance, socialSecurity, salarySummary, externalInd] = await Promise.all([
-    db.mockUserInfo.findUnique({ where: { userId } }),
-    db.mockAccountBalance.findUnique({ where: { userId } }),
-    db.mockSocialSecurity.findUnique({ where: { userId } }),
-    db.mockSalarySummary.findUnique({ where: { userId } }),
-    db.mockExternalIndicator.findUnique({ where: { userId } }),
+  // 并行：本地 DB 指标 + 外部 HTTP 指标
+  const [
+    [userInfo, accountBalance, socialSecurity, salarySummary],
+    externalInd,
+  ] = await Promise.all([
+    Promise.all([
+      db.mockUserInfo.findUnique({ where: { userId } }),
+      db.mockAccountBalance.findUnique({ where: { userId } }),
+      db.mockSocialSecurity.findUnique({ where: { userId } }),
+      db.mockSalarySummary.findUnique({ where: { userId } }),
+    ]),
+    fetchExternalIndicators(userId),
   ]);
 
-  if (!userInfo || !accountBalance || !socialSecurity || !salarySummary || !externalInd) {
+  if (!userInfo || !accountBalance || !socialSecurity || !salarySummary) {
     return {
       resultCode: '0001',
       resultMsg: '用户数据不存在',
@@ -27,28 +92,33 @@ export async function calculateCreditScore(userId: string): Promise<ScoreResult>
     };
   }
 
-  const userLevel = userInfo.userLevel;
-  const avg3mBalance = Number(accountBalance.avg3mBalance);
+  const userLevel          = userInfo.userLevel;
+  const avg3mBalance       = Number(accountBalance.avg3mBalance);
   const socialSecurityFlag = socialSecurity.socialSecurityFlag;
-  const monthlySalary = Number(salarySummary.monthlySalary);
+  const monthlySalary      = Number(salarySummary.monthlySalary);
 
-  // 准入判断（v2.0）：6条全满足才准入
+  // 外部指标字段（来自合并后的外呼返回体，字段名由挡板配置决定）
+  const cardStatus         = externalInd.cardStatus;
+  const idCheckResult      = externalInd.idCheckResult;
+  const isBlack            = externalInd.isBlack;
+  const recentTransAmount  = externalInd.recentTransAmount;
+
+  // 准入判断：本地指标 + 外部指标全部满足
   const admitted =
     monthlySalary > 10000 &&
     socialSecurityFlag === 1 &&
-    externalInd.cardStatus === 'NORMAL' &&
-    externalInd.idCheckResult === 'PASS' &&
-    externalInd.isBlack === false &&
-    Number(externalInd.recentTransAmount) > 0;
+    cardStatus === 'NORMAL' &&
+    idCheckResult === 'PASS' &&
+    isBlack === false &&
+    Number(recentTransAmount) > 0;
 
   if (!admitted) {
     return { resultCode: '0000', resultMsg: 'success', admitFlag: '0', creditLimit: '0.00' };
   }
 
-  // 系数取值（v2.0）：3档
+  // 系数：3 档
   const coefficient = avg3mBalance > 1000 ? 2.3 : avg3mBalance > 0 ? 0.5 : 0.2;
 
-  // 额度计算（v2.0）：去掉 ÷1000，负数归零
   let creditLimit = userLevel * avg3mBalance * monthlySalary * coefficient;
   if (creditLimit < 0) creditLimit = 0;
 

@@ -7,6 +7,8 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx watch src/server/index.ts",
+    "dev:stub": "tsx watch src/stub-server/server.ts",
+    "dev:buggy": "tsx watch src/mock-buggy/server.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",

@@ -62,13 +62,26 @@ export async function registerMockRoutes(app: FastifyInstance): Promise<void> {
 
   /**
    * POST /mock/setup
-   * 设置测试前置条件 - 为指定用户创建/更新 mock 数据
+   * 设置测试前置条件：
+   *   - 写入本地数据库指标（userLevel / avg3mBalance / socialSecurityFlag / monthlySalary）
+   *   - 可选 external_stubs：批量向挡板服务器注册外部服务路由，供 C 系统外呼
+   *
+   * external_stubs 格式：
+   * [
+   *   {
+   *     name: "支付宝",               // 服务名（标注用）
+   *     path: "/alipay/query",        // 挡板路径（C 系统将 POST 到此）
+   *     method?: "POST",              // 默认 POST
+   *     statusCode?: 200,             // 默认 200
+   *     response: { ... }             // 任意 JSON，字段自由定义
+   *   }
+   * ]
    */
   app.post('/mock/setup', async (request: FastifyRequest, reply: FastifyReply) => {
     const logger = getLogger();
     const body = request.body as any;
-    
-    const { userId, userLevel, avg3mBalance, socialSecurityFlag, monthlySalary, external_setup } = body;
+
+    const { userId, userLevel, avg3mBalance, socialSecurityFlag, monthlySalary, external_setup, external_stubs } = body;
 
     if (!userId) {
       return reply.status(400).send({ success: false, error: 'userId is required' });
@@ -121,9 +134,49 @@ export async function registerMockRoutes(app: FastifyInstance): Promise<void> {
 
       await db.$transaction(ops);
 
-      logger.info({ userId, userLevel, avg3mBalance, socialSecurityFlag, monthlySalary, hasExternal: !!external_setup }, '[Mock] 数据设置完成');
+      // 向挡板服务器注册外部服务路由
+      const stubResults: any[] = [];
+      if (Array.isArray(external_stubs) && external_stubs.length > 0) {
+        const STUB_URL = process.env.STUB_SERVER_URL ?? 'http://localhost:8002';
 
-      return reply.send({ success: true, userId, message: 'Test data configured successfully' });
+        for (const stub of external_stubs) {
+          const { name, path, method = 'POST', statusCode = 200, response } = stub;
+          if (!path || response === undefined) continue;
+
+          try {
+            // 注册挡板路由（任意 method + path → response）
+            await fetch(`${STUB_URL}/_admin/routes`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name, method, path, statusCode, response }),
+              signal: AbortSignal.timeout(3000),
+            });
+
+            // 同时注册为外部服务（告知 C 系统外呼此路径）
+            await fetch(`${STUB_URL}/_admin/ext-services`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: name ?? path, path, method }),
+              signal: AbortSignal.timeout(3000),
+            });
+
+            stubResults.push({ path, ok: true });
+            logger.info({ name, path }, '[Mock] 外部服务挡板已配置');
+          } catch (err: any) {
+            stubResults.push({ path, ok: false, error: err.message });
+            logger.warn({ name, path, err: err.message }, '[Mock] 挡板服务器配置失败');
+          }
+        }
+      }
+
+      logger.info({ userId, userLevel, avg3mBalance, socialSecurityFlag, monthlySalary, stubs: stubResults.length }, '[Mock] 数据设置完成');
+
+      return reply.send({
+        success: true,
+        userId,
+        message: 'Test data configured successfully',
+        stubs: stubResults,
+      });
     } catch (error: any) {
       logger.error({ error: error.message }, '[Mock] 数据设置失败');
       return reply.status(500).send({ success: false, error: error.message });
