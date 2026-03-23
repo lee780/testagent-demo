@@ -66,10 +66,15 @@ TestAgent-PI-main/
 │       │                    # ReportsView、ReportDetailView
 │       │                    # DefectsView、DefectDetailView
 │       │                    # KnowledgeBaseView（5 Tab 知识库管理）
+│       │                    # StubServerView（挡板管理）、UserStoryView
 │       ├── components/      # FileDownloadPanel、ToolCallCard、MarkdownViewer 等
 │       └── api/             # Axios HTTP 客户端
+├── docs/                    # 项目文档
+│   ├── reference/           # MODEL001 参考资料（业务规则、用例样例、场景模板）
+│   └── *.md                 # 需求/设计/测试/架构文档
 ├── prisma/                  # 数据库 Schema（PostgreSQL）
-├── test/                    # Vitest 测试
+├── test/                    # Vitest 单元测试
+├── e2e/                     # Playwright E2E 测试
 ├── .testagent/workspace/    # Agent 运行时工作区（scratch、outputs、sessions）
 └── storage/                 # 用户上传文件
 ```

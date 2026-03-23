@@ -275,8 +275,32 @@
         </div>
 
         <div class="arch-block">
-          <h3 class="arch-h3">2. 测试流程时序图</h3>
-          <div class="mermaid-wrap" ref="el2"></div>
+          <h3 class="arch-h3">2a. 场景 A — 生产正常场景（用户发起）</h3>
+          <div class="mermaid-wrap" ref="elSceneA"></div>
+        </div>
+
+        <div class="arch-block">
+          <h3 class="arch-h3">2b. 场景 B — TestPilot 测试场景（Agent 接管，挡板替换外呼）</h3>
+          <div class="mermaid-wrap" ref="elSceneB"></div>
+          <p class="arch-note">★ 标注三处关键变化。<strong>授信C系统代码、接口、内部逻辑全程不变</strong>，TestPilot 仅替换"输入来源"。</p>
+          <div style="padding: 0 20px 20px">
+            <table class="arch-table" style="margin: 0; width: 100%">
+              <thead>
+                <tr><th>维度</th><th>场景 A（生产）</th><th>场景 B（TestPilot 测试）</th><th></th></tr>
+              </thead>
+              <tbody>
+                <tr style="background:#fff7ed"><td>发起方</td><td>真实用户</td><td>TestPilot Agent</td><td><span style="color:#dc2626;font-weight:700">★ 变了</span></td></tr>
+                <tr style="background:#fff7ed"><td>Step A 数据来源</td><td>客户真实历史数据</td><td>Agent 提前写入的测试数据</td><td><span style="color:#dc2626;font-weight:700">★ 变了</span></td></tr>
+                <tr style="background:#fff7ed"><td>Step B 外呼目标</td><td>真实外部系统（外网）</td><td>TestPilot 挡板（内网，可控）</td><td><span style="color:#dc2626;font-weight:700">★ 变了</span></td></tr>
+                <tr style="background:#f0fdf4"><td>授信C系统接口</td><td>POST /credit/score</td><td>POST /credit/score</td><td><span style="color:#059669;font-weight:700">不变</span></td></tr>
+                <tr style="background:#f0fdf4"><td>授信C系统代码</td><td>原始代码</td><td>原始代码（零修改）</td><td><span style="color:#059669;font-weight:700">不变</span></td></tr>
+                <tr style="background:#f0fdf4"><td>Step A / B / C 逻辑</td><td>原始业务规则</td><td>原始业务规则</td><td><span style="color:#059669;font-weight:700">不变</span></td></tr>
+              </tbody>
+            </table>
+            <p class="arch-note" style="padding: 12px 0 0; margin: 0">
+              💡 <strong>一句话总结：</strong>TestPilot 把「不可控的真实世界」替换成「完全可控的测试环境」，授信C系统本身感知不到任何差异。
+            </p>
+          </div>
         </div>
 
         <div class="arch-block">
@@ -295,18 +319,18 @@
           <table class="arch-table">
             <thead><tr><th>组件</th><th>所属系统</th><th>网络位置</th><th>端口</th></tr></thead>
             <tbody>
-              <tr><td>TestPilot Agent</td><td>TestPilot</td><td>内网</td><td>—</td></tr>
-              <tr><td>TestPilot DB</td><td>TestPilot</td><td>内网</td><td>5432</td></tr>
+              <tr><td>TestPilot 后端（含内置 mock）</td><td>TestPilot</td><td>内网</td><td>8000</td></tr>
+              <tr><td>TestPilot DB（PostgreSQL）</td><td>TestPilot</td><td>内网</td><td>5432</td></tr>
               <tr><td>TestPilot 挡板系统</td><td>TestPilot</td><td>内网</td><td>8002</td></tr>
-              <tr><td>授信C系统</td><td>授信C系统</td><td>内网</td><td>8000</td></tr>
-              <tr><td>授信C系统 DB</td><td>授信C系统</td><td>内网</td><td>3306（MySQL）</td></tr>
-              <tr class="row-danger"><td>真实外部三方接口</td><td>外网</td><td>外网</td><td>— （测试不可达）</td></tr>
+              <tr><td>授信C系统</td><td>授信C系统</td><td>内网</td><td>由被测方配置（独立部署）</td></tr>
+              <tr><td>授信C系统 DB（MySQL）</td><td>授信C系统</td><td>内网</td><td>3306</td></tr>
+              <tr class="row-danger"><td>真实外部三方接口</td><td>外网</td><td>外网</td><td>— （测试环境不可达）</td></tr>
             </tbody>
           </table>
           <p class="arch-note">
             <strong>两个系统，各自职责：</strong><br>
-            · <strong>TestPilot</strong>：测试平台，包含 Agent、TestPilot DB、挡板系统三个组件。挡板系统代码在 TestPilot 仓库中，由 TestPilot 团队启动和管理。<br>
-            · <strong>授信C系统</strong>：被测系统，包含业务逻辑和授信C系统 DB。测试时将外呼地址指向 TestPilot 挡板，生产时改回真实外部地址，代码零修改。
+            · <strong>TestPilot</strong>：测试平台，包含后端服务（:8000）、TestPilot DB（PostgreSQL :5432）、挡板系统（:8002）三个组件。后端内置 mock 模块（路径 <code>/mock</code>）用于开发自测，模拟授信C系统行为。<br>
+            · <strong>授信C系统</strong>：被测系统，独立部署，有自己的业务逻辑和 MySQL 数据库。测试时把 <code>STUB_SERVER_URL</code> 指向 TestPilot 挡板（:8002），<strong>代码零修改</strong>。
           </p>
         </div>
 
@@ -320,7 +344,8 @@
 import { ref, onMounted } from 'vue'
 
 const el1 = ref(null)
-const el2 = ref(null)
+const elSceneA = ref(null)
+const elSceneB = ref(null)
 const el3 = ref(null)
 const el4 = ref(null)
 
@@ -371,29 +396,91 @@ const DIAGRAMS = [
     style STUB fill:#d4edda,stroke:#27ae60`
   },
   {
-    el: el2,
+    el: elSceneA,
     code: `sequenceDiagram
-    participant A as 🤖 TestPilot Agent
-    participant CDB as 🗄️ 授信C系统 DB
-    participant C as 授信C系统
-    participant S as 🧱 TestPilot 挡板系统
-    Note over A,S: 阶段一：准备测试前置条件
-    A->>CDB: ② 写入测试前置数据（月薪、余额、社保等）
-    A->>S: ③ 配置挡板返回值（支付宝特征、公积金缴存等）
-    Note over A,S: 阶段二：发起测试请求
-    A->>C: ① POST /credit/score { userId }
+    actor User as 👤 真实用户
+    participant C as 🏦 授信C系统
+    participant CDB as 🗄️ C系统DB（MySQL）
+    participant EXT as 🌐 真实外部系统
+
+    User->>C: POST /credit/score { userId }
     activate C
-    C->>CDB: Step A：查自身存量数据
-    CDB-->>C: 返回历史流水、余额、社保状态
-    C->>S: Step B：外呼支付宝（TestPilot 挡板拦截）
-    S-->>C: 返回配置好的支付宝特征
-    C->>S: Step B：外呼公积金（TestPilot 挡板拦截）
-    S-->>C: 返回配置好的公积金数据
-    C->>C: Step C：汇总本地指标 + 外呼指标，按规则计算 → 准入 + 额度
-    C-->>A: 返回 { admit_flag, credit_limit }
-    deactivate C
-    Note over A,S: 阶段三：结果比对
-    A->>A: 实际结果 vs 预期结果，判断用例通过 / 失败`
+
+    rect rgb(220, 235, 255)
+        Note over C,CDB: Step A — 查询自身存量数据
+        C->>CDB: 查历史流水 / 余额 / 社保状态 / 用户等级
+        CDB-->>C: 返回客户存量数据
+    end
+
+    rect rgb(255, 240, 210)
+        Note over C,EXT: Step B — 外呼真实三方渠道（需外网）
+        C->>EXT: 外呼支付宝 → 获取消费流水特征
+        EXT-->>C: 返回支付宝数据
+        C->>EXT: 外呼公积金中心 → 获取缴存记录
+        EXT-->>C: 返回公积金数据
+        C->>EXT: 外呼房产局 → 获取房产登记信息
+        EXT-->>C: 返回房产数据
+    end
+
+    rect rgb(220, 255, 220)
+        Note over C: Step C — 汇总规则计算
+        C->>C: 合并 Step A + B 全部指标<br/>→ 准入规则判断 + 信用额度档位计算
+    end
+
+    C-->>User: 返回 { admit_flag, credit_limit }
+    deactivate C`
+  },
+  {
+    el: elSceneB,
+    code: `sequenceDiagram
+    participant TP as 🤖 TestPilot Agent
+    participant C as 🏦 授信C系统（代码零修改）
+    participant CDB as 🗄️ C系统DB（MySQL）
+    participant STUB as 🧱 TestPilot 挡板
+
+    rect rgb(230, 255, 230)
+        Note over TP,STUB: ① 准备阶段 — TestPilot 构造可控的测试环境
+        TP->>CDB: ★ 写入测试前置数据（月薪/余额/社保）
+        Note right of CDB: 精准控制 Step A 将读到的值
+        TP->>STUB: ★ 配置挡板路由返回值（支付宝/公积金/房产）
+        Note right of STUB: 精准控制 Step B 将收到的值
+    end
+
+    rect rgb(220, 235, 255)
+        Note over TP,STUB: ② 执行阶段 — 与生产场景完全相同的调用路径
+
+        TP->>C: ★ POST /credit/score { userId }
+        activate C
+
+        rect rgb(210, 228, 255)
+            Note over C,CDB: Step A — 查询存量数据（逻辑同生产）
+            C->>CDB: 查历史流水 / 余额 / 社保状态 / 用户等级
+            CDB-->>C: 返回预置的存量数据
+        end
+
+        rect rgb(255, 238, 200)
+            Note over C,STUB: Step B — 外呼三方渠道（被挡板无感拦截）
+            C->>STUB: 外呼「支付宝」（STUB_SERVER_URL 指向挡板，C系统无感知）
+            STUB-->>C: 返回预配置的支付宝数据
+            C->>STUB: 外呼「公积金中心」
+            STUB-->>C: 返回预配置的公积金数据
+            C->>STUB: 外呼「房产局」
+            STUB-->>C: 返回预配置的房产数据
+        end
+
+        rect rgb(215, 255, 215)
+            Note over C: Step C — 汇总规则计算（逻辑同生产）
+            C->>C: 合并 Step A + B 全部指标<br/>→ 准入规则判断 + 信用额度档位计算
+        end
+
+        C-->>TP: 返回 { admit_flag, credit_limit }
+        deactivate C
+    end
+
+    rect rgb(255, 245, 220)
+        Note over TP,STUB: ③ 验证阶段
+        TP->>TP: 实际结果 vs 预期值<br/>→ 通过 / 失败 → 写入测试报告
+    end`
   },
   {
     el: el3,

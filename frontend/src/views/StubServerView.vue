@@ -226,13 +226,270 @@
           </section>
 
           <section class="guide-section">
-            <h3 class="guide-h3">五、注意事项</h3>
+            <h3 class="guide-h3">五、挡板场景库（命名场景）</h3>
+            <p>v2.5 起，挡板配置可以保存为"命名场景"存入知识库，供 Agent 在测试执行时自动应用，无需每次手动配置路由。</p>
+            <div class="concept-cards" style="margin-top: 12px">
+              <div class="concept-card">
+                <div class="concept-title">📦 创建命名场景</div>
+                <div class="concept-body">
+                  <p>在<strong>知识库 → 挡板场景库</strong>中，将一组路由配置保存为有意义的名称，例如：</p>
+                  <ul>
+                    <li>「支付宝正常-公积金正常」</li>
+                    <li>「银行卡冻结场景」</li>
+                    <li>「黑名单命中场景」</li>
+                  </ul>
+                  <p>每个场景记录完整的外部指标返回值，与测试用例分开维护。</p>
+                </div>
+              </div>
+              <div class="concept-card">
+                <div class="concept-title">🤖 Agent 自动应用</div>
+                <div class="concept-body">
+                  <p>测试用例中指定 <code>external_setup_ref: "场景名"</code>，Agent 执行时自动从知识库查找并调用对应挡板配置，无需人工干预。</p>
+                  <div class="concept-example">
+                    <div class="concept-example-title">用例片段示例</div>
+                    <pre>test_case:
+  name: 银行卡冻结-不准入验证
+  external_setup_ref: "银行卡冻结场景"
+  # Agent 自动加载该场景的挡板配置</pre>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flow-note" style="margin-top: 14px">
+              <strong>推荐用法：</strong>手动配置路由用于临时调试；命名场景用于回归测试——场景固化后，每次执行结果可复现，方便 CI/自动化集成。
+            </div>
+          </section>
+
+          <section class="guide-section">
+            <h3 class="guide-h3">六、注意事项</h3>
             <ul class="guide-notes">
               <li>挡板数据存在<strong>内存</strong>中，重启挡板服务后需重新配置路由和外部服务</li>
               <li>多条外部服务的返回体字段若重名，<strong>后注册的服务会覆盖前面的同名字段</strong></li>
               <li>外部服务列表是全局的，当前不区分用户 ID；并发测试不同用户时注意挡板配置的影响</li>
               <li>测试报告中的缺陷若涉及外部指标分支，需在缺陷描述中记录当时的挡板配置，便于复现</li>
+              <li>命名场景只存储挡板返回值配置，<strong>不自动注册到挡板内存</strong>；Agent 执行 <code>external_setup_ref</code> 时才真正写入</li>
             </ul>
+          </section>
+
+          <section class="guide-section">
+            <h3 class="guide-h3">七、两种场景时序图对比</h3>
+            <p>帮助理解 TestPilot 在测试中替换了哪些环节，而<strong>授信C系统的代码、接口、内部逻辑始终不变</strong>。</p>
+
+            <div class="seq-compare">
+
+              <!-- ── 场景 A ── -->
+              <div class="seq-panel">
+                <div class="seq-panel-hd seq-hd-a">场景 A — 生产正常场景（用户发起）</div>
+                <div class="seq-actors-row">
+                  <span class="seq-act act-user">👤 用户</span>
+                  <span class="seq-act act-csys">🏦 授信C系统</span>
+                  <span class="seq-act act-db">🗄️ C系统DB</span>
+                  <span class="seq-act act-ext">🌐 真实外部系统</span>
+                </div>
+                <div class="seq-body">
+
+                  <div class="seq-msg">
+                    <span class="seq-sndr">用户</span>
+                    <span class="seq-arr">── POST /credit/score ──────▶</span>
+                    <span class="seq-rcvr">授信C系统</span>
+                  </div>
+
+                  <div class="seq-phase phase-stepA">
+                    <div class="seq-phase-hd">Step A — 查询自身存量数据</div>
+                    <div class="seq-msg">
+                      <span class="seq-sndr">授信C系统</span>
+                      <span class="seq-arr">── 查流水/余额/社保/等级 ──▶</span>
+                      <span class="seq-rcvr">C系统DB</span>
+                    </div>
+                    <div class="seq-msg seq-ret">
+                      <span class="seq-sndr">C系统DB</span>
+                      <span class="seq-arr">◀── 返回客户存量数据 ────</span>
+                      <span class="seq-rcvr">授信C系统</span>
+                    </div>
+                  </div>
+
+                  <div class="seq-phase phase-stepB">
+                    <div class="seq-phase-hd">Step B — 外呼真实三方（需外网）</div>
+                    <div class="seq-msg">
+                      <span class="seq-sndr">授信C系统</span>
+                      <span class="seq-arr">── 外呼支付宝 ──────────▶</span>
+                      <span class="seq-rcvr">真实外部系统</span>
+                    </div>
+                    <div class="seq-msg seq-ret">
+                      <span class="seq-sndr">真实外部系统</span>
+                      <span class="seq-arr">◀── 返回支付宝数据 ──────</span>
+                      <span class="seq-rcvr">授信C系统</span>
+                    </div>
+                    <div class="seq-msg">
+                      <span class="seq-sndr">授信C系统</span>
+                      <span class="seq-arr">── 外呼公积金 / 房产 ───▶</span>
+                      <span class="seq-rcvr">真实外部系统</span>
+                    </div>
+                    <div class="seq-msg seq-ret">
+                      <span class="seq-sndr">真实外部系统</span>
+                      <span class="seq-arr">◀── 返回各项外部数据 ────</span>
+                      <span class="seq-rcvr">授信C系统</span>
+                    </div>
+                  </div>
+
+                  <div class="seq-phase phase-stepC">
+                    <div class="seq-phase-hd">Step C — 汇总规则计算</div>
+                    <div class="seq-self">授信C系统 内部：合并 Step A + B 全部指标 → 准入判断 + 额度档位计算</div>
+                  </div>
+
+                  <div class="seq-msg seq-final">
+                    <span class="seq-sndr">授信C系统</span>
+                    <span class="seq-arr">◀── { admit_flag, credit_limit } ──</span>
+                    <span class="seq-rcvr">用户</span>
+                  </div>
+
+                </div>
+              </div>
+
+              <!-- ── 场景 B ── -->
+              <div class="seq-panel">
+                <div class="seq-panel-hd seq-hd-b">场景 B — TestPilot 测试场景（Agent 接管）</div>
+                <div class="seq-actors-row">
+                  <span class="seq-act act-tp">🤖 TestPilot</span>
+                  <span class="seq-act act-csys">🏦 授信C系统</span>
+                  <span class="seq-act act-db">🗄️ C系统DB</span>
+                  <span class="seq-act act-stub">🧱 TestPilot挡板</span>
+                </div>
+                <div class="seq-body">
+
+                  <div class="seq-phase phase-prep">
+                    <div class="seq-phase-hd">① 准备阶段 — 构造可控的测试环境</div>
+                    <div class="seq-msg">
+                      <span class="seq-sndr seq-star">★ TestPilot</span>
+                      <span class="seq-arr">── 写入测试前置数据（控制StepA）──▶</span>
+                      <span class="seq-rcvr">C系统DB</span>
+                    </div>
+                    <div class="seq-msg">
+                      <span class="seq-sndr seq-star">★ TestPilot</span>
+                      <span class="seq-arr">── 配置挡板路由返回值（控制StepB）▶</span>
+                      <span class="seq-rcvr">TestPilot挡板</span>
+                    </div>
+                  </div>
+
+                  <div class="seq-msg seq-msg-star">
+                    <span class="seq-sndr seq-star">★ TestPilot</span>
+                    <span class="seq-arr">── POST /credit/score ──────▶</span>
+                    <span class="seq-rcvr">授信C系统</span>
+                  </div>
+                  <div class="seq-inline-note">↑ 发起方从真实用户变为 TestPilot</div>
+
+                  <div class="seq-phase phase-stepA">
+                    <div class="seq-phase-hd">Step A — 查询存量数据（逻辑同生产）</div>
+                    <div class="seq-msg">
+                      <span class="seq-sndr">授信C系统</span>
+                      <span class="seq-arr">── 查流水/余额/社保/等级 ──▶</span>
+                      <span class="seq-rcvr">C系统DB</span>
+                    </div>
+                    <div class="seq-msg seq-ret">
+                      <span class="seq-sndr">C系统DB</span>
+                      <span class="seq-arr">◀── 返回【预置的】存量数据 ──</span>
+                      <span class="seq-rcvr">授信C系统</span>
+                    </div>
+                  </div>
+
+                  <div class="seq-phase phase-stepB">
+                    <div class="seq-phase-hd">★ Step B — 外呼被挡板无感拦截</div>
+                    <div class="seq-msg">
+                      <span class="seq-sndr">授信C系统</span>
+                      <span class="seq-arr">── 外呼「支付宝」（C系统无感知）▶</span>
+                      <span class="seq-rcvr">TestPilot挡板</span>
+                    </div>
+                    <div class="seq-msg seq-ret">
+                      <span class="seq-sndr">TestPilot挡板</span>
+                      <span class="seq-arr">◀── 返回预配置的支付宝数据 ──</span>
+                      <span class="seq-rcvr">授信C系统</span>
+                    </div>
+                    <div class="seq-msg">
+                      <span class="seq-sndr">授信C系统</span>
+                      <span class="seq-arr">── 外呼「公积金」/「房产」 ───▶</span>
+                      <span class="seq-rcvr">TestPilot挡板</span>
+                    </div>
+                    <div class="seq-msg seq-ret">
+                      <span class="seq-sndr">TestPilot挡板</span>
+                      <span class="seq-arr">◀── 返回各项预配置数据 ──────</span>
+                      <span class="seq-rcvr">授信C系统</span>
+                    </div>
+                  </div>
+
+                  <div class="seq-phase phase-stepC">
+                    <div class="seq-phase-hd">Step C — 汇总规则计算（逻辑同生产）</div>
+                    <div class="seq-self">授信C系统 内部：合并 Step A + B 全部指标 → 准入判断 + 额度档位计算</div>
+                  </div>
+
+                  <div class="seq-msg seq-final">
+                    <span class="seq-sndr">授信C系统</span>
+                    <span class="seq-arr">◀── { admit_flag, credit_limit } ──</span>
+                    <span class="seq-rcvr">TestPilot</span>
+                  </div>
+
+                  <div class="seq-phase phase-verify">
+                    <div class="seq-phase-hd">③ 验证阶段</div>
+                    <div class="seq-self">TestPilot：实际结果 vs 预期值 → 通过 / 失败 → 写入测试报告</div>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+
+            <!-- 对比表 -->
+            <table class="seq-table">
+              <thead>
+                <tr>
+                  <th>维度</th>
+                  <th>场景 A（生产）</th>
+                  <th>场景 B（TestPilot 测试）</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="seq-tr-changed">
+                  <td>发起方</td>
+                  <td>真实用户</td>
+                  <td>TestPilot Agent</td>
+                  <td><span class="seq-badge-changed">★ 变了</span></td>
+                </tr>
+                <tr class="seq-tr-changed">
+                  <td>Step A 数据来源</td>
+                  <td>客户真实历史数据</td>
+                  <td>Agent 提前写入的测试数据</td>
+                  <td><span class="seq-badge-changed">★ 变了</span></td>
+                </tr>
+                <tr class="seq-tr-changed">
+                  <td>Step B 外呼目标</td>
+                  <td>真实外部系统（外网）</td>
+                  <td>TestPilot 挡板（内网，可控）</td>
+                  <td><span class="seq-badge-changed">★ 变了</span></td>
+                </tr>
+                <tr class="seq-tr-same">
+                  <td>授信C系统接口</td>
+                  <td>POST /credit/score</td>
+                  <td>POST /credit/score</td>
+                  <td><span class="seq-badge-same">不变</span></td>
+                </tr>
+                <tr class="seq-tr-same">
+                  <td>授信C系统代码</td>
+                  <td>原始代码</td>
+                  <td>原始代码（零修改）</td>
+                  <td><span class="seq-badge-same">不变</span></td>
+                </tr>
+                <tr class="seq-tr-same">
+                  <td>Step A / B / C 逻辑</td>
+                  <td>原始业务规则</td>
+                  <td>原始业务规则</td>
+                  <td><span class="seq-badge-same">不变</span></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="flow-note" style="margin-top: 12px">
+              💡 <strong>一句话总结：</strong>TestPilot 把「不可控的真实世界」替换成「完全可控的测试环境」，授信C系统本身感知不到任何差异。
+            </div>
+
           </section>
 
         </div>
@@ -633,4 +890,124 @@ onMounted(loadAll)
 .guide-notes { padding-left: 20px; margin: 0; }
 .guide-notes li { font-size: 13px; line-height: 1.8; color: var(--el-text-color-regular); margin-bottom: 4px; }
 .guide-notes strong { color: var(--el-text-color-primary); }
+
+/* ── 七、两种场景时序图对比 ── */
+.seq-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 14px 0;
+}
+.seq-panel {
+  border: 1px solid var(--el-border-color-light);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.seq-panel-hd {
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
+.seq-hd-a { background: #2980b9; }
+.seq-hd-b { background: #27ae60; }
+
+.seq-actors-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 8px 10px;
+  background: var(--el-fill-color-light);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+.seq-act {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.act-user { background: #dbeafe; color: #1e40af; }
+.act-csys { background: #fef3c7; color: #92400e; }
+.act-db   { background: #ede9fe; color: #4c1d95; }
+.act-ext  { background: #fee2e2; color: #991b1b; }
+.act-tp   { background: #d1fae5; color: #065f46; }
+.act-stub { background: #ffedd5; color: #9a3412; }
+
+.seq-body { padding: 10px 12px; }
+
+.seq-phase {
+  border-left: 3px solid;
+  padding: 5px 8px 5px 10px;
+  margin: 6px 0;
+  border-radius: 0 4px 4px 0;
+}
+.seq-phase-hd {
+  font-size: 11px;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 5px;
+}
+.phase-prep  { border-color: #27ae60; background: #f0fdf4; }
+.phase-stepA { border-color: #3b82f6; background: #eff6ff; }
+.phase-stepB { border-color: #f59e0b; background: #fffbeb; }
+.phase-stepC { border-color: #10b981; background: #ecfdf5; }
+.phase-verify { border-color: #f59e0b; background: #fffbeb; }
+
+.seq-msg {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 3px 0;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.seq-sndr { color: #374151; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
+.seq-arr  { color: #9ca3af; flex: 1; text-align: center; font-family: monospace; font-size: 10px; }
+.seq-rcvr { color: #374151; font-weight: 500; white-space: nowrap; flex-shrink: 0; }
+.seq-ret .seq-sndr, .seq-ret .seq-rcvr { color: #9ca3af; }
+.seq-final { margin-top: 8px; font-weight: 600; }
+.seq-msg-star {
+  background: #fef9c3;
+  border-radius: 4px;
+  padding: 2px 4px;
+  margin: 4px 0;
+}
+.seq-self {
+  font-size: 11px;
+  color: #6b7280;
+  font-style: italic;
+  padding: 2px 0;
+}
+.seq-star { color: #dc2626 !important; font-weight: 700; }
+.seq-inline-note {
+  font-size: 10px;
+  color: #9ca3af;
+  font-style: italic;
+  margin: 0 0 4px 6px;
+}
+
+/* 对比表 */
+.seq-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 14px;
+}
+.seq-table th {
+  background: var(--el-fill-color-light);
+  padding: 7px 12px;
+  text-align: left;
+  border: 1px solid var(--el-border-color-light);
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+.seq-table td {
+  padding: 6px 12px;
+  border: 1px solid var(--el-border-color-light);
+  color: var(--el-text-color-regular);
+}
+.seq-tr-changed { background: #fff7ed; }
+.seq-tr-same    { background: #f0fdf4; }
+.seq-badge-changed { color: #dc2626; font-weight: 700; white-space: nowrap; }
+.seq-badge-same    { color: #059669; font-weight: 700; }
 </style>

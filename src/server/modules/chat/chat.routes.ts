@@ -249,7 +249,7 @@ export async function registerChatRoutes(app: FastifyInstance): Promise<void> {
     '/api/chat/presets',
     { preHandler: [authenticate] },
     async (_request: FastifyRequest, _reply: FastifyReply) => {
-      const presetsDir = path.resolve(process.cwd(), 'docs/testfile');
+      const presetsDir = path.resolve(process.cwd(), 'docs/reference');
       const readSafe = (p: string): string | null => {
         try { return fs.readFileSync(p, 'utf-8'); } catch { return null; }
       };
