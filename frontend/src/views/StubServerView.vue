@@ -110,7 +110,7 @@
               <div class="flow-col-right">
                 <div class="flow-box flow-csys">
                   <div class="flow-label">授信C系统</div>
-                  <div class="flow-sub">授信C系统 :8000</div>
+                  <div class="flow-sub">:8000</div>
                 </div>
                 <div class="flow-inner-arrows">
                   <div class="flow-inner-item">

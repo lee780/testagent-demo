@@ -295,18 +295,18 @@
           <table class="arch-table">
             <thead><tr><th>组件</th><th>所属系统</th><th>网络位置</th><th>端口</th></tr></thead>
             <tbody>
-              <tr><td>TestPilot Agent</td><td>TestPilot 测试平台</td><td>内网</td><td>—</td></tr>
-              <tr><td>TestPilot DB</td><td>TestPilot 测试平台</td><td>内网</td><td>5432</td></tr>
+              <tr><td>TestPilot Agent</td><td>TestPilot</td><td>内网</td><td>—</td></tr>
+              <tr><td>TestPilot DB</td><td>TestPilot</td><td>内网</td><td>5432</td></tr>
+              <tr><td>TestPilot 挡板系统</td><td>TestPilot</td><td>内网</td><td>8002</td></tr>
               <tr><td>授信C系统</td><td>授信C系统</td><td>内网</td><td>8000</td></tr>
-              <tr><td>授信授信C系统 DB</td><td>授信C系统</td><td>内网</td><td>5432（独立实例）</td></tr>
-              <tr><td>挡板系统（Mock Server）</td><td>测试基础设施</td><td>内网</td><td>8002</td></tr>
+              <tr><td>授信C系统 DB</td><td>授信C系统</td><td>内网</td><td>5432（独立实例）</td></tr>
               <tr class="row-danger"><td>真实外部三方接口</td><td>外网</td><td>外网</td><td>— （测试不可达）</td></tr>
             </tbody>
           </table>
           <p class="arch-note">
-            <strong>TestPilot DB 与 授信授信C系统 DB 是两个完全独立的数据库实例，职责不同：</strong><br>
-            · <strong>TestPilot DB</strong>：存储平台自身数据（对话、报告、用例、缺陷、知识库）<br>
-            · <strong>授信授信C系统 DB</strong>：存储授信C系统的客户存量数据，Agent 在测试前往这里写入前置数据来控制分支
+            <strong>两个系统，各自职责：</strong><br>
+            · <strong>TestPilot</strong>：测试平台，包含 Agent、TestPilot DB、挡板系统三个组件。挡板系统代码在 TestPilot 仓库中，由 TestPilot 团队启动和管理。<br>
+            · <strong>授信C系统</strong>：被测系统，包含业务逻辑和授信C系统 DB。测试时将外呼地址指向 TestPilot 挡板，生产时改回真实外部地址，代码零修改。
           </p>
         </div>
 
@@ -336,10 +336,11 @@ const DIAGRAMS = [
     end
     subgraph INTRANET ["🔒 测试环境（内网隔离）"]
         direction TB
-        subgraph TP ["TestPilot 测试平台"]
+        subgraph TP ["TestPilot（测试平台）"]
             direction TB
             AGENT["🤖 测试 Agent\\n────────────\\n· 生成测试用例\\n· 写入测试前置数据\\n· 发起被测请求\\n· 比对测试结果"]
             TPDB[("🗄️ TestPilot DB\\n────────────\\n对话 / 报告\\n用例 / 缺陷\\n知识库")]
+            STUB["🧱 TestPilot 挡板系统\\n────────────\\n归属 TestPilot\\n任意路径可注册\\n返回体完全可配置"]
         end
         subgraph CSYS ["授信C系统"]
             direction TB
@@ -352,12 +353,11 @@ const DIAGRAMS = [
             ENTRY --> STEP_B --> STEP_C
             STEP_A -- "读取" --> CDB
         end
-        STUB["🧱 挡板系统\\nMock Server\\n────────────\\n任意路径可注册\\n返回体完全可配置"]
     end
     AGENT -- "① 发起测试请求" --> ENTRY
     AGENT -- "② 写入测试前置数据\\nPOST /mock/setup" --> CDB
     AGENT -- "③ 配置挡板返回值\\nPOST /_admin/routes" --> STUB
-    STEP_B -- "④ 外呼（挡板拦截）" --> STUB
+    STEP_B -- "④ 外呼（TestPilot 挡板拦截）" --> STUB
     STUB -. "❌ 测试环境不可达" .-> ALI
     STUB -. "❌ 测试环境不可达" .-> WX
     STUB -. "❌ 测试环境不可达" .-> GJJ
@@ -368,7 +368,7 @@ const DIAGRAMS = [
     style CSYS fill:#fff9e6,stroke:#f39c12,color:#333
     style TPDB fill:#d4edda,stroke:#27ae60
     style CDB fill:#f0eaff,stroke:#8e44ad
-    style STUB fill:#fff0e0,stroke:#e67e22`
+    style STUB fill:#d4edda,stroke:#27ae60`
   },
   {
     el: el2,
@@ -376,7 +376,7 @@ const DIAGRAMS = [
     participant A as 🤖 TestPilot Agent
     participant CDB as 🗄️ 授信C系统 DB
     participant C as 授信C系统
-    participant S as 🧱 挡板系统
+    participant S as 🧱 TestPilot 挡板系统
     Note over A,S: 阶段一：准备测试前置条件
     A->>CDB: ② 写入测试前置数据（月薪、余额、社保等）
     A->>S: ③ 配置挡板返回值（支付宝特征、公积金缴存等）
@@ -385,9 +385,9 @@ const DIAGRAMS = [
     activate C
     C->>CDB: Step A：查自身存量数据
     CDB-->>C: 返回历史流水、余额、社保状态
-    C->>S: Step B：外呼支付宝（挡板拦截）
+    C->>S: Step B：外呼支付宝（TestPilot 挡板拦截）
     S-->>C: 返回配置好的支付宝特征
-    C->>S: Step B：外呼公积金（挡板拦截）
+    C->>S: Step B：外呼公积金（TestPilot 挡板拦截）
     S-->>C: 返回配置好的公积金数据
     C->>C: Step C：汇总本地指标 + 外呼指标，按规则计算 → 准入 + 额度
     C-->>A: 返回 { admit_flag, credit_limit }
@@ -400,14 +400,14 @@ const DIAGRAMS = [
     code: `flowchart LR
     subgraph SA ["场景 A：触发本地分支"]
         direction TB
-        A1["Agent 写入\\n授信C系统 DB\\n月薪 / 余额 / 社保"] --> B1["C系统\\nStep A 读自身DB\\n拿到不同值"] --> C1["命中不同\\n准入分支\\n或额度档位"]
+        A1["TestPilot Agent\\n写入授信C系统 DB\\n月薪 / 余额 / 社保"] --> B1["授信C系统\\nStep A 读自身DB\\n拿到不同值"] --> C1["命中不同\\n准入分支\\n或额度档位"]
     end
     subgraph SB ["场景 B：触发外呼分支"]
         direction TB
-        A2["Agent 配置\\n挡板返回值\\n支付宝 / 公积金 / 房产"] --> B2["C系统\\nStep B 外呼\\n挡板返回不同数据"] --> C2["命中不同\\n外部特征分支"]
+        A2["TestPilot Agent\\n配置挡板返回值\\n支付宝 / 公积金 / 房产"] --> B2["授信C系统\\nStep B 外呼\\nTestPilot 挡板返回不同数据"] --> C2["命中不同\\n外部特征分支"]
     end
     style SA fill:#e8f8e8,stroke:#27ae60
-    style SB fill:#fff0e0,stroke:#e67e22`
+    style SB fill:#e8f8e8,stroke:#27ae60`
   },
   {
     el: el4,
@@ -418,7 +418,7 @@ const DIAGRAMS = [
     end
     subgraph TEST ["测试环境"]
         direction LR
-        C_TEST["授信C系统\\n（代码不变）"] -- "HTTP\\n仅改 STUB_SERVER_URL" --> STUB_T["挡板系统\\n:8002\\n返回值可控"]
+        C_TEST["授信C系统\\n（代码不变）"] -- "HTTP\\n仅改 STUB_SERVER_URL" --> STUB_T["TestPilot 挡板系统\\n:8002\\n返回值可控"]
     end
     style PROD fill:#ffeaea,stroke:#e74c3c
     style TEST fill:#eaf4ff,stroke:#2980b9`
