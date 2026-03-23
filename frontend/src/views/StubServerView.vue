@@ -51,7 +51,7 @@
       <el-tab-pane label="外部服务" name="services">
         <div class="tab-desc">
           <span class="tab-desc-icon">🔌</span>
-          <span>C 系统外呼清单。授信计算时会并行调用此列表中所有路径，合并返回字段作为外部指标。<strong>路由必须同时在「已注册路由」中配置返回体</strong>，否则返回 404。</span>
+          <span>授信C系统外呼清单。授信计算时会并行调用此列表中所有路径，合并返回字段作为外部指标。<strong>路由必须同时在「已注册路由」中配置返回体</strong>，否则返回 404。</span>
         </div>
         <div class="tab-toolbar">
           <el-button type="primary" size="small" @click="openSvcDialog()">+ 新增外部服务</el-button>
@@ -86,8 +86,8 @@
 
           <section class="guide-section">
             <h3 class="guide-h3">一、为什么需要挡板？</h3>
-            <p>授信 C 系统在计算信用额度时，除了读取自身数据库，还需要向外部第三方系统发起实时外呼（如支付宝、微信、公积金、房产查询等），拿到外部特征指标后合并计算。</p>
-            <p>但在测试环境中，这些外部系统<strong>不允许联调、不允许压测、无法随意调用</strong>。挡板服务器就是在这条链路上架设一个"假的对端"，C 系统发出去的每一笔外呼都被挡板拦截，返回我们提前配置好的数据——真实外网永远不会被触碰。</p>
+            <p>授信C系统在计算信用额度时，除了读取自身数据库，还需要向外部第三方系统发起实时外呼（如支付宝、微信、公积金、房产查询等），拿到外部特征指标后合并计算。</p>
+            <p>但在测试环境中，这些外部系统<strong>不允许联调、不允许压测、无法随意调用</strong>。挡板服务器就是在这条链路上架设一个"假的对端"，授信C系统发出去的每一笔外呼都被挡板拦截，返回我们提前配置好的数据——真实外网永远不会被触碰。</p>
           </section>
 
           <section class="guide-section">
@@ -109,14 +109,14 @@
               </div>
               <div class="flow-col-right">
                 <div class="flow-box flow-csys">
-                  <div class="flow-label">授信 C 系统</div>
-                  <div class="flow-sub">被测对象 :8000</div>
+                  <div class="flow-label">授信C系统</div>
+                  <div class="flow-sub">授信C系统 :8000</div>
                 </div>
                 <div class="flow-inner-arrows">
                   <div class="flow-inner-item">
                     <span class="flow-inner-arrow">③ 读本地 DB ──▶</span>
                     <div class="flow-box flow-db">
-                      <div class="flow-label">本地数据库</div>
+                      <div class="flow-label">授信C系统 DB</div>
                       <div class="flow-sub">存量指标</div>
                     </div>
                   </div>
@@ -134,7 +134,7 @@
               </div>
             </div>
             <div class="flow-note">
-              挡板服务器与 C 系统同在内网。C 系统的外呼目标地址通过环境变量 <code>STUB_SERVER_URL</code> 指向挡板，<strong>生产环境改回真实地址即可，C 系统代码零修改</strong>。
+              挡板服务器与授信C系统同在内网。授信C系统的外呼目标地址通过环境变量 <code>STUB_SERVER_URL</code> 指向挡板，<strong>生产环境改回真实地址即可，授信C系统代码零修改</strong>。
             </div>
           </section>
 
@@ -145,12 +145,12 @@
                 <div class="concept-title">🔀 已注册路由</div>
                 <div class="concept-body">
                   <p>挡板拦截的"地址 → 返回体"映射。</p>
-                  <p>C 系统外呼某个路径时，挡板查找有没有匹配的路由：</p>
+                  <p>授信C系统外呼某个路径时，挡板查找有没有匹配的路由：</p>
                   <ul>
                     <li>有 → 返回配置好的 JSON</li>
                     <li>没有 → 返回 404</li>
                   </ul>
-                  <p>返回体字段可以任意定义，不限于固定格式。多个路由的字段会被 C 系统合并后统一参与计算。</p>
+                  <p>返回体字段可以任意定义，不限于固定格式。多个路由的字段会被授信C系统合并后统一参与计算。</p>
                   <div class="concept-example">
                     <div class="concept-example-title">示例</div>
                     <pre>路径：POST /alipay/query
@@ -165,10 +165,10 @@
               <div class="concept-card">
                 <div class="concept-title">🔌 外部服务</div>
                 <div class="concept-body">
-                  <p>C 系统外呼的"服务清单"。</p>
-                  <p>C 系统在计算前，先读取此列表，然后并行调用每一条路径，将所有返回字段合并成外部指标集合。</p>
+                  <p>授信C系统外呼的"服务清单"。</p>
+                  <p>授信C系统在计算前，先读取此列表，然后并行调用每一条路径，将所有返回字段合并成外部指标集合。</p>
                   <ul>
-                    <li>列表为空 → C 系统无外部指标，只用本地指标计算</li>
+                    <li>列表为空 → 授信C系统无外部指标，只用本地指标计算</li>
                     <li>有服务但缺对应路由 → 该服务返回 404，该路径指标跳过</li>
                   </ul>
                   <p><strong>路由负责"返回什么"，外部服务负责"调哪里"，两者缺一不可。</strong></p>
@@ -271,7 +271,7 @@
           <div v-if="routeForm.jsonError" class="json-error-msg">{{ routeForm.jsonError }}</div>
         </el-form-item>
         <el-form-item label="同时注册">
-          <el-checkbox v-model="routeForm.alsoRegisterSvc">将此路径加入外部服务列表（C 系统外呼）</el-checkbox>
+          <el-checkbox v-model="routeForm.alsoRegisterSvc">将此路径加入外部服务列表（授信C系统外呼）</el-checkbox>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -470,7 +470,7 @@ async function saveSvc() {
 }
 
 async function deleteService(row) {
-  await ElMessageBox.confirm(`移除外部服务「${row.name}」？C 系统将不再外呼此路径。`, '确认移除', { type: 'warning' })
+  await ElMessageBox.confirm(`移除外部服务「${row.name}」？授信C系统将不再外呼此路径。`, '确认移除', { type: 'warning' })
   await fetch(`${STUB_URL}/_admin/ext-services`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
@@ -481,7 +481,7 @@ async function deleteService(row) {
 }
 
 async function clearServices() {
-  await ElMessageBox.confirm('清空所有外部服务？C 系统将无外呼指标。', '确认清空', { type: 'warning' })
+  await ElMessageBox.confirm('清空所有外部服务？授信C系统将无外呼指标。', '确认清空', { type: 'warning' })
   await fetch(`${STUB_URL}/_admin/ext-services/clear`, { method: 'DELETE' })
   ElMessage.success('已清空')
   await loadServices()

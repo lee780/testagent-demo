@@ -267,7 +267,7 @@
     <section id="arch" class="section section-arch">
       <div class="section-inner section-inner-wide">
         <h2 class="section-title">08 — 测试架构组网图</h2>
-        <p class="section-sub">TestPilot 测试平台 · 授信 C 系统 · 挡板 · 各自数据库 · 真实外部渠道的部署位置、网络关系与调用流向</p>
+        <p class="section-sub">TestPilot 测试平台 · 授信C系统 · 挡板 · 各自数据库 · 真实外部渠道的部署位置、网络关系与调用流向</p>
 
         <div class="arch-block">
           <h3 class="arch-h3">1. 整体架构图</h3>
@@ -287,7 +287,7 @@
         <div class="arch-block">
           <h3 class="arch-h3">4. 真实环境 vs 测试环境对比</h3>
           <div class="mermaid-wrap" ref="el4"></div>
-          <p class="arch-note">切换点：C 系统配置文件中 <code>STUB_SERVER_URL</code> 指向挡板地址，<strong>C 系统代码零修改</strong>。</p>
+          <p class="arch-note">切换点：授信C系统配置文件中 <code>STUB_SERVER_URL</code> 指向挡板地址，<strong>授信C系统代码零修改</strong>。</p>
         </div>
 
         <div class="arch-block">
@@ -297,16 +297,16 @@
             <tbody>
               <tr><td>TestPilot Agent</td><td>TestPilot 测试平台</td><td>内网</td><td>—</td></tr>
               <tr><td>TestPilot DB</td><td>TestPilot 测试平台</td><td>内网</td><td>5432</td></tr>
-              <tr><td>授信 C 系统</td><td>被测系统</td><td>内网</td><td>8000</td></tr>
-              <tr><td>C 系统 DB</td><td>被测系统</td><td>内网</td><td>5432（独立实例）</td></tr>
+              <tr><td>授信C系统</td><td>授信C系统</td><td>内网</td><td>8000</td></tr>
+              <tr><td>授信授信C系统 DB</td><td>授信C系统</td><td>内网</td><td>5432（独立实例）</td></tr>
               <tr><td>挡板系统（Mock Server）</td><td>测试基础设施</td><td>内网</td><td>8002</td></tr>
               <tr class="row-danger"><td>真实外部三方接口</td><td>外网</td><td>外网</td><td>— （测试不可达）</td></tr>
             </tbody>
           </table>
           <p class="arch-note">
-            <strong>TestPilot DB 与 C 系统 DB 是两个完全独立的数据库实例，职责不同：</strong><br>
+            <strong>TestPilot DB 与 授信授信C系统 DB 是两个完全独立的数据库实例，职责不同：</strong><br>
             · <strong>TestPilot DB</strong>：存储平台自身数据（对话、报告、用例、缺陷、知识库）<br>
-            · <strong>C 系统 DB</strong>：存储被测系统的客户存量数据，Agent 在测试前往这里写入前置数据来控制分支
+            · <strong>授信授信C系统 DB</strong>：存储授信C系统的客户存量数据，Agent 在测试前往这里写入前置数据来控制分支
           </p>
         </div>
 
@@ -341,13 +341,13 @@ const DIAGRAMS = [
             AGENT["🤖 测试 Agent\\n────────────\\n· 生成测试用例\\n· 写入测试前置数据\\n· 发起被测请求\\n· 比对测试结果"]
             TPDB[("🗄️ TestPilot DB\\n────────────\\n对话 / 报告\\n用例 / 缺陷\\n知识库")]
         end
-        subgraph CSYS ["授信 C 系统（被测对象）"]
+        subgraph CSYS ["授信C系统"]
             direction TB
             ENTRY["入口\\nPOST /credit/score"]
             STEP_A["Step A\\n查自身数据库\\n历史流水 / 沉淀指标 / 已有标签"]
             STEP_B["Step B\\n外呼第三方系统\\n支付宝 / 微信 / 公积金 / 房产"]
             STEP_C["Step C\\n汇总指标 → 规则计算\\n输出准入标志 + 信用额度"]
-            CDB[("🗄️ C系统 DB\\n────────────\\n客户存量数据\\n历史流水\\n已有指标")]
+            CDB[("🗄️ 授信C系统 DB\\n────────────\\n客户存量数据\\n历史流水\\n已有指标")]
             ENTRY --> STEP_A --> STEP_C
             ENTRY --> STEP_B --> STEP_C
             STEP_A -- "读取" --> CDB
@@ -374,8 +374,8 @@ const DIAGRAMS = [
     el: el2,
     code: `sequenceDiagram
     participant A as 🤖 TestPilot Agent
-    participant CDB as 🗄️ C系统 DB
-    participant C as 授信 C 系统
+    participant CDB as 🗄️ 授信C系统 DB
+    participant C as 授信C系统
     participant S as 🧱 挡板系统
     Note over A,S: 阶段一：准备测试前置条件
     A->>CDB: ② 写入测试前置数据（月薪、余额、社保等）
@@ -400,7 +400,7 @@ const DIAGRAMS = [
     code: `flowchart LR
     subgraph SA ["场景 A：触发本地分支"]
         direction TB
-        A1["Agent 写入\\nC系统 DB\\n月薪 / 余额 / 社保"] --> B1["C系统\\nStep A 读自身DB\\n拿到不同值"] --> C1["命中不同\\n准入分支\\n或额度档位"]
+        A1["Agent 写入\\n授信C系统 DB\\n月薪 / 余额 / 社保"] --> B1["C系统\\nStep A 读自身DB\\n拿到不同值"] --> C1["命中不同\\n准入分支\\n或额度档位"]
     end
     subgraph SB ["场景 B：触发外呼分支"]
         direction TB
@@ -414,11 +414,11 @@ const DIAGRAMS = [
     code: `flowchart LR
     subgraph PROD ["生产环境"]
         direction LR
-        C_PROD["授信 C 系统"] -- "HTTPS" --> EXT["api.alipay.com\\n公积金中心\\n房产局接口"]
+        C_PROD["授信C系统"] -- "HTTPS" --> EXT["api.alipay.com\\n公积金中心\\n房产局接口"]
     end
     subgraph TEST ["测试环境"]
         direction LR
-        C_TEST["授信 C 系统\\n（代码不变）"] -- "HTTP\\n仅改 STUB_SERVER_URL" --> STUB_T["挡板系统\\n:8002\\n返回值可控"]
+        C_TEST["授信C系统\\n（代码不变）"] -- "HTTP\\n仅改 STUB_SERVER_URL" --> STUB_T["挡板系统\\n:8002\\n返回值可控"]
     end
     style PROD fill:#ffeaea,stroke:#e74c3c
     style TEST fill:#eaf4ff,stroke:#2980b9`
