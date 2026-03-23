@@ -267,7 +267,7 @@
     <section id="arch" class="section section-arch">
       <div class="section-inner section-inner-wide">
         <h2 class="section-title">08 — 测试架构组网图</h2>
-        <p class="section-sub">授信 C 系统 · 挡板 · 测试 Agent · 数据库 · 真实外部渠道的部署位置、网络关系与调用流向</p>
+        <p class="section-sub">TestPilot 测试平台 · 授信 C 系统 · 挡板 · 各自数据库 · 真实外部渠道的部署位置、网络关系与调用流向</p>
 
         <div class="arch-block">
           <h3 class="arch-h3">1. 整体架构图</h3>
@@ -293,15 +293,21 @@
         <div class="arch-block">
           <h3 class="arch-h3">5. 部署位置一览</h3>
           <table class="arch-table">
-            <thead><tr><th>组件</th><th>网络位置</th><th>端口</th></tr></thead>
+            <thead><tr><th>组件</th><th>所属系统</th><th>网络位置</th><th>端口</th></tr></thead>
             <tbody>
-              <tr><td>测试 Agent</td><td>内网</td><td>—</td></tr>
-              <tr><td>授信 C 系统</td><td>内网</td><td>8000</td></tr>
-              <tr><td>本地数据库（PostgreSQL）</td><td>内网</td><td>5432</td></tr>
-              <tr><td>挡板系统（Mock Server）</td><td>内网</td><td>8002</td></tr>
-              <tr class="row-danger"><td>真实外部三方接口</td><td>外网</td><td>— （测试环境不可达）</td></tr>
+              <tr><td>TestPilot Agent</td><td>TestPilot 测试平台</td><td>内网</td><td>—</td></tr>
+              <tr><td>TestPilot DB</td><td>TestPilot 测试平台</td><td>内网</td><td>5432</td></tr>
+              <tr><td>授信 C 系统</td><td>被测系统</td><td>内网</td><td>8000</td></tr>
+              <tr><td>C 系统 DB</td><td>被测系统</td><td>内网</td><td>5432（独立实例）</td></tr>
+              <tr><td>挡板系统（Mock Server）</td><td>测试基础设施</td><td>内网</td><td>8002</td></tr>
+              <tr class="row-danger"><td>真实外部三方接口</td><td>外网</td><td>外网</td><td>— （测试不可达）</td></tr>
             </tbody>
           </table>
+          <p class="arch-note">
+            <strong>TestPilot DB 与 C 系统 DB 是两个完全独立的数据库实例，职责不同：</strong><br>
+            · <strong>TestPilot DB</strong>：存储平台自身数据（对话、报告、用例、缺陷、知识库）<br>
+            · <strong>C 系统 DB</strong>：存储被测系统的客户存量数据，Agent 在测试前往这里写入前置数据来控制分支
+          </p>
         </div>
 
       </div>
@@ -330,55 +336,60 @@ const DIAGRAMS = [
     end
     subgraph INTRANET ["🔒 测试环境（内网隔离）"]
         direction TB
-        AGENT["🤖 测试 Agent\\n────────────\\n· 生成测试用例\\n· 写入测试前置数据\\n· 发起被测请求\\n· 比对测试结果"]
-        subgraph C_SYS ["授信 C 系统（被测对象）"]
+        subgraph TP ["TestPilot 测试平台"]
+            direction TB
+            AGENT["🤖 测试 Agent\\n────────────\\n· 生成测试用例\\n· 写入测试前置数据\\n· 发起被测请求\\n· 比对测试结果"]
+            TPDB[("🗄️ TestPilot DB\\n────────────\\n对话 / 报告\\n用例 / 缺陷\\n知识库")]
+        end
+        subgraph CSYS ["授信 C 系统（被测对象）"]
             direction TB
             ENTRY["入口\\nPOST /credit/score"]
-            STEP_A["Step A\\n查本地数据库\\n历史流水 / 沉淀指标 / 已有标签"]
+            STEP_A["Step A\\n查自身数据库\\n历史流水 / 沉淀指标 / 已有标签"]
             STEP_B["Step B\\n外呼第三方系统\\n支付宝 / 微信 / 公积金 / 房产"]
             STEP_C["Step C\\n汇总指标 → 规则计算\\n输出准入标志 + 信用额度"]
+            CDB[("🗄️ C系统 DB\\n────────────\\n客户存量数据\\n历史流水\\n已有指标")]
             ENTRY --> STEP_A --> STEP_C
             ENTRY --> STEP_B --> STEP_C
+            STEP_A -- "读取" --> CDB
         end
-        DB[("🗄️ 本地数据库\\nPostgreSQL\\n────────────\\n用户基础信息\\n近3月平均余额\\n社保缴纳状态\\n月收入流水")]
         STUB["🧱 挡板系统\\nMock Server\\n────────────\\n任意路径可注册\\n返回体完全可配置"]
     end
     AGENT -- "① 发起测试请求" --> ENTRY
-    AGENT -- "② 写入本地指标\\nPOST /mock/setup" --> DB
+    AGENT -- "② 写入测试前置数据\\nPOST /mock/setup" --> CDB
     AGENT -- "③ 配置挡板返回值\\nPOST /_admin/routes" --> STUB
-    STEP_A -- "④ 读取本地指标" --> DB
-    STEP_B -- "⑤ 外呼（挡板拦截）" --> STUB
+    STEP_B -- "④ 外呼（挡板拦截）" --> STUB
     STUB -. "❌ 测试环境不可达" .-> ALI
     STUB -. "❌ 测试环境不可达" .-> WX
     STUB -. "❌ 测试环境不可达" .-> GJJ
     STUB -. "❌ 测试环境不可达" .-> RE
     style INTERNET fill:#ffeaea,stroke:#e74c3c,color:#333
     style INTRANET fill:#eaf4ff,stroke:#2980b9,color:#333
-    style C_SYS fill:#fff9e6,stroke:#f39c12,color:#333
-    style AGENT fill:#e8f8e8,stroke:#27ae60
-    style DB fill:#f0eaff,stroke:#8e44ad
+    style TP fill:#e8f8e8,stroke:#27ae60,color:#333
+    style CSYS fill:#fff9e6,stroke:#f39c12,color:#333
+    style TPDB fill:#d4edda,stroke:#27ae60
+    style CDB fill:#f0eaff,stroke:#8e44ad
     style STUB fill:#fff0e0,stroke:#e67e22`
   },
   {
     el: el2,
     code: `sequenceDiagram
-    participant A as 🤖 测试 Agent
+    participant A as 🤖 TestPilot Agent
+    participant CDB as 🗄️ C系统 DB
     participant C as 授信 C 系统
-    participant DB as 🗄️ 本地数据库
     participant S as 🧱 挡板系统
     Note over A,S: 阶段一：准备测试前置条件
-    A->>DB: ② 写入本地指标（月薪、余额、社保等）
+    A->>CDB: ② 写入测试前置数据（月薪、余额、社保等）
     A->>S: ③ 配置挡板返回值（支付宝特征、公积金缴存等）
     Note over A,S: 阶段二：发起测试请求
     A->>C: ① POST /credit/score { userId }
     activate C
-    C->>DB: ④ 查本地沉淀指标
-    DB-->>C: 返回历史流水、余额、社保状态
-    C->>S: ⑤ 外呼支付宝（挡板拦截）
+    C->>CDB: Step A：查自身存量数据
+    CDB-->>C: 返回历史流水、余额、社保状态
+    C->>S: Step B：外呼支付宝（挡板拦截）
     S-->>C: 返回配置好的支付宝特征
-    C->>S: ⑤ 外呼公积金（挡板拦截）
+    C->>S: Step B：外呼公积金（挡板拦截）
     S-->>C: 返回配置好的公积金数据
-    C->>C: 汇总本地指标 + 外呼指标，按规则计算 → 准入 + 额度
+    C->>C: Step C：汇总本地指标 + 外呼指标，按规则计算 → 准入 + 额度
     C-->>A: 返回 { admit_flag, credit_limit }
     deactivate C
     Note over A,S: 阶段三：结果比对
@@ -389,7 +400,7 @@ const DIAGRAMS = [
     code: `flowchart LR
     subgraph SA ["场景 A：触发本地分支"]
         direction TB
-        A1["Agent 写入\\n本地指标\\n月薪 / 余额 / 社保"] --> B1["C系统\\nStep A 读 DB\\n拿到不同值"] --> C1["命中不同\\n准入分支\\n或额度档位"]
+        A1["Agent 写入\\nC系统 DB\\n月薪 / 余额 / 社保"] --> B1["C系统\\nStep A 读自身DB\\n拿到不同值"] --> C1["命中不同\\n准入分支\\n或额度档位"]
     end
     subgraph SB ["场景 B：触发外呼分支"]
         direction TB
