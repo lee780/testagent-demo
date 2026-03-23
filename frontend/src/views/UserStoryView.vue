@@ -6,6 +6,7 @@
       <a href="#value" class="story-nav-link" @click.prevent="scrollTo('value')">领导价值</a>
       <a href="#userstory" class="story-nav-link" @click.prevent="scrollTo('userstory')">用户故事</a>
       <a href="#roadmap" class="story-nav-link" @click.prevent="scrollTo('roadmap')">下一步计划</a>
+      <a href="#arch" class="story-nav-link" @click.prevent="scrollTo('arch')">测试架构组网图</a>
     </nav>
 
     <!-- ══════════════════════════════════════════
@@ -260,13 +261,179 @@
       </div>
     </section>
 
+    <!-- ══════════════════════════════════════════
+         第四屏：测试架构组网图
+    ══════════════════════════════════════════ -->
+    <section id="arch" class="section section-arch">
+      <div class="section-inner section-inner-wide">
+        <h2 class="section-title">08 — 测试架构组网图</h2>
+        <p class="section-sub">授信 C 系统 · 挡板 · 测试 Agent · 数据库 · 真实外部渠道的部署位置、网络关系与调用流向</p>
+
+        <div class="arch-block">
+          <h3 class="arch-h3">1. 整体架构图</h3>
+          <div class="mermaid-wrap" ref="el1"></div>
+        </div>
+
+        <div class="arch-block">
+          <h3 class="arch-h3">2. 测试流程时序图</h3>
+          <div class="mermaid-wrap" ref="el2"></div>
+        </div>
+
+        <div class="arch-block">
+          <h3 class="arch-h3">3. 两类场景触发路径</h3>
+          <div class="mermaid-wrap" ref="el3"></div>
+        </div>
+
+        <div class="arch-block">
+          <h3 class="arch-h3">4. 真实环境 vs 测试环境对比</h3>
+          <div class="mermaid-wrap" ref="el4"></div>
+          <p class="arch-note">切换点：C 系统配置文件中 <code>STUB_SERVER_URL</code> 指向挡板地址，<strong>C 系统代码零修改</strong>。</p>
+        </div>
+
+        <div class="arch-block">
+          <h3 class="arch-h3">5. 部署位置一览</h3>
+          <table class="arch-table">
+            <thead><tr><th>组件</th><th>网络位置</th><th>端口</th></tr></thead>
+            <tbody>
+              <tr><td>测试 Agent</td><td>内网</td><td>—</td></tr>
+              <tr><td>授信 C 系统</td><td>内网</td><td>8000</td></tr>
+              <tr><td>本地数据库（PostgreSQL）</td><td>内网</td><td>5432</td></tr>
+              <tr><td>挡板系统（Mock Server）</td><td>内网</td><td>8002</td></tr>
+              <tr class="row-danger"><td>真实外部三方接口</td><td>外网</td><td>— （测试环境不可达）</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </section>
+
   </div>
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
+
+const el1 = ref(null)
+const el2 = ref(null)
+const el3 = ref(null)
+const el4 = ref(null)
+
+const DIAGRAMS = [
+  {
+    el: el1,
+    code: `graph TB
+    subgraph INTERNET ["🌐 外网（测试环境不可达）"]
+        ALI["支付宝\\n真实接口"]
+        WX["微信\\n真实接口"]
+        GJJ["公积金\\n真实接口"]
+        RE["房产\\n真实接口"]
+    end
+    subgraph INTRANET ["🔒 测试环境（内网隔离）"]
+        direction TB
+        AGENT["🤖 测试 Agent\\n────────────\\n· 生成测试用例\\n· 写入测试前置数据\\n· 发起被测请求\\n· 比对测试结果"]
+        subgraph C_SYS ["授信 C 系统（被测对象）"]
+            direction TB
+            ENTRY["入口\\nPOST /credit/score"]
+            STEP_A["Step A\\n查本地数据库\\n历史流水 / 沉淀指标 / 已有标签"]
+            STEP_B["Step B\\n外呼第三方系统\\n支付宝 / 微信 / 公积金 / 房产"]
+            STEP_C["Step C\\n汇总指标 → 规则计算\\n输出准入标志 + 信用额度"]
+            ENTRY --> STEP_A --> STEP_C
+            ENTRY --> STEP_B --> STEP_C
+        end
+        DB[("🗄️ 本地数据库\\nPostgreSQL\\n────────────\\n用户基础信息\\n近3月平均余额\\n社保缴纳状态\\n月收入流水")]
+        STUB["🧱 挡板系统\\nMock Server\\n────────────\\n任意路径可注册\\n返回体完全可配置"]
+    end
+    AGENT -- "① 发起测试请求" --> ENTRY
+    AGENT -- "② 写入本地指标\\nPOST /mock/setup" --> DB
+    AGENT -- "③ 配置挡板返回值\\nPOST /_admin/routes" --> STUB
+    STEP_A -- "④ 读取本地指标" --> DB
+    STEP_B -- "⑤ 外呼（挡板拦截）" --> STUB
+    STUB -. "❌ 测试环境不可达" .-> ALI
+    STUB -. "❌ 测试环境不可达" .-> WX
+    STUB -. "❌ 测试环境不可达" .-> GJJ
+    STUB -. "❌ 测试环境不可达" .-> RE
+    style INTERNET fill:#ffeaea,stroke:#e74c3c,color:#333
+    style INTRANET fill:#eaf4ff,stroke:#2980b9,color:#333
+    style C_SYS fill:#fff9e6,stroke:#f39c12,color:#333
+    style AGENT fill:#e8f8e8,stroke:#27ae60
+    style DB fill:#f0eaff,stroke:#8e44ad
+    style STUB fill:#fff0e0,stroke:#e67e22`
+  },
+  {
+    el: el2,
+    code: `sequenceDiagram
+    participant A as 🤖 测试 Agent
+    participant C as 授信 C 系统
+    participant DB as 🗄️ 本地数据库
+    participant S as 🧱 挡板系统
+    Note over A,S: 阶段一：准备测试前置条件
+    A->>DB: ② 写入本地指标（月薪、余额、社保等）
+    A->>S: ③ 配置挡板返回值（支付宝特征、公积金缴存等）
+    Note over A,S: 阶段二：发起测试请求
+    A->>C: ① POST /credit/score { userId }
+    activate C
+    C->>DB: ④ 查本地沉淀指标
+    DB-->>C: 返回历史流水、余额、社保状态
+    C->>S: ⑤ 外呼支付宝（挡板拦截）
+    S-->>C: 返回配置好的支付宝特征
+    C->>S: ⑤ 外呼公积金（挡板拦截）
+    S-->>C: 返回配置好的公积金数据
+    C->>C: 汇总本地指标 + 外呼指标，按规则计算 → 准入 + 额度
+    C-->>A: 返回 { admit_flag, credit_limit }
+    deactivate C
+    Note over A,S: 阶段三：结果比对
+    A->>A: 实际结果 vs 预期结果，判断用例通过 / 失败`
+  },
+  {
+    el: el3,
+    code: `flowchart LR
+    subgraph SA ["场景 A：触发本地分支"]
+        direction TB
+        A1["Agent 写入\\n本地指标\\n月薪 / 余额 / 社保"] --> B1["C系统\\nStep A 读 DB\\n拿到不同值"] --> C1["命中不同\\n准入分支\\n或额度档位"]
+    end
+    subgraph SB ["场景 B：触发外呼分支"]
+        direction TB
+        A2["Agent 配置\\n挡板返回值\\n支付宝 / 公积金 / 房产"] --> B2["C系统\\nStep B 外呼\\n挡板返回不同数据"] --> C2["命中不同\\n外部特征分支"]
+    end
+    style SA fill:#e8f8e8,stroke:#27ae60
+    style SB fill:#fff0e0,stroke:#e67e22`
+  },
+  {
+    el: el4,
+    code: `flowchart LR
+    subgraph PROD ["生产环境"]
+        direction LR
+        C_PROD["授信 C 系统"] -- "HTTPS" --> EXT["api.alipay.com\\n公积金中心\\n房产局接口"]
+    end
+    subgraph TEST ["测试环境"]
+        direction LR
+        C_TEST["授信 C 系统\\n（代码不变）"] -- "HTTP\\n仅改 STUB_SERVER_URL" --> STUB_T["挡板系统\\n:8002\\n返回值可控"]
+    end
+    style PROD fill:#ffeaea,stroke:#e74c3c
+    style TEST fill:#eaf4ff,stroke:#2980b9`
+  },
+]
+
+async function renderMermaid() {
+  const mermaid = (await import('mermaid')).default
+  mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' })
+  for (const [i, d] of DIAGRAMS.entries()) {
+    if (!d.el.value) continue
+    try {
+      const id = `mermaid-diagram-${i}`
+      const { svg } = await mermaid.render(id, d.code)
+      d.el.value.innerHTML = svg
+    } catch (e) {
+      d.el.value.innerHTML = `<pre style="color:red;font-size:12px">${e.message}</pre>`
+    }
+  }
+}
+
 function scrollTo(id) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
+
+onMounted(renderMermaid)
 </script>
 
 <style scoped>
@@ -393,6 +560,56 @@ function scrollTo(id) {
 .cta-icon { font-size: 28px; margin-bottom: 8px; }
 .cta-label { font-size: 14px; font-weight: 600; margin-bottom: 6px; color: var(--text-primary); }
 .cta-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+
+/* ── 第四屏：架构组网图 ── */
+.section-arch { background: var(--main-bg); }
+.section-inner-wide { max-width: 1000px; }
+
+.arch-block {
+  margin-bottom: 40px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color, #e8e8e8);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.arch-h3 {
+  font-size: 14px; font-weight: 700;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-color, #e8e8e8);
+  margin: 0; color: var(--text-primary);
+  background: var(--el-fill-color-light, #f5f7fa);
+}
+.mermaid-wrap {
+  padding: 24px 20px;
+  overflow-x: auto;
+  text-align: center;
+}
+.mermaid-wrap svg { max-width: 100%; height: auto; }
+
+.arch-note {
+  padding: 10px 20px 16px;
+  font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin: 0;
+}
+.arch-note code {
+  background: var(--el-fill-color, #f5f5f5);
+  padding: 1px 6px; border-radius: 3px;
+  font-family: monospace; font-size: 12px;
+}
+
+.arch-table {
+  width: calc(100% - 40px); margin: 16px 20px;
+  border-collapse: collapse; font-size: 13px;
+}
+.arch-table th, .arch-table td {
+  padding: 9px 14px; text-align: left;
+  border-bottom: 1px solid var(--border-color, #e8e8e8);
+}
+.arch-table th {
+  background: var(--el-fill-color-light, #f5f7fa);
+  font-weight: 600; color: var(--text-primary);
+}
+.arch-table td { color: var(--text-secondary); }
+.arch-table .row-danger td { color: #c0392b; }
 
 /* ── 响应式兜底 ── */
 @media (max-width: 700px) {
