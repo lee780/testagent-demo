@@ -299,7 +299,7 @@
               <tr><td>TestPilot DB</td><td>TestPilot</td><td>内网</td><td>5432</td></tr>
               <tr><td>TestPilot 挡板系统</td><td>TestPilot</td><td>内网</td><td>8002</td></tr>
               <tr><td>授信C系统</td><td>授信C系统</td><td>内网</td><td>8000</td></tr>
-              <tr><td>授信C系统 DB</td><td>授信C系统</td><td>内网</td><td>5432（独立实例）</td></tr>
+              <tr><td>授信C系统 DB</td><td>授信C系统</td><td>内网</td><td>3306（MySQL）</td></tr>
               <tr class="row-danger"><td>真实外部三方接口</td><td>外网</td><td>外网</td><td>— （测试不可达）</td></tr>
             </tbody>
           </table>
@@ -348,7 +348,7 @@ const DIAGRAMS = [
             STEP_A["Step A\\n查自身数据库\\n历史流水 / 沉淀指标 / 已有标签"]
             STEP_B["Step B\\n外呼第三方系统\\n支付宝 / 微信 / 公积金 / 房产"]
             STEP_C["Step C\\n汇总指标 → 规则计算\\n输出准入标志 + 信用额度"]
-            CDB[("🗄️ 授信C系统 DB\\n────────────\\n客户存量数据\\n历史流水\\n已有指标")]
+            CDB[("🗄️ 授信C系统 DB\\n（MySQL）\\n────────────\\n客户存量数据\\n历史流水\\n已有指标")]
             ENTRY --> STEP_A --> STEP_C
             ENTRY --> STEP_B --> STEP_C
             STEP_A -- "读取" --> CDB
