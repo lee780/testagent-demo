@@ -17,6 +17,59 @@ import { getPrisma } from "../../server/config/database.js";
 import type { AgentToolDef, AgentToolResult } from "./code-index.js";
 import type { ToolConfig } from "./config.js";
 
+// ── Design error detector ────────────────────────────────
+//
+// For MODEL001 credit_limit assertions: if the actual value matches the
+// formula-derived correct result but the expected value in the test case doesn't,
+// the test case itself was written with a wrong expected value (not a system bug).
+
+function detectCaseDesignHints(tc: any, assertionResults: AssertionResult[]): string | undefined {
+  const dbSetup: DbSetup = tc.preconditions?.db_setup ?? {};
+  const externalSetup: Record<string, unknown> = tc.preconditions?.external_setup ?? {};
+
+  const userLevel      = dbSetup.user_info?.user_level;
+  const avg3mBalance   = dbSetup.account_balance?.avg_3m_balance;
+  const monthlySalary  = dbSetup.salary_summary?.monthly_salary;
+
+  if (userLevel == null || avg3mBalance == null || monthlySalary == null) return undefined;
+
+  // Quick admission check from test case setup data
+  const ss          = dbSetup.cgs_social_security?.social_security_flag ?? 0;
+  const cardStatus  = externalSetup.card_status  ?? 'NORMAL';
+  const idCheck     = externalSetup.id_check_result ?? 'PASS';
+  const isBlack     = externalSetup.is_black     ?? false;
+  const recentTrans = Number(externalSetup.recent_trans_amount ?? 0);
+
+  const admitted =
+    monthlySalary > 10000 &&
+    ss === 1 &&
+    cardStatus === 'NORMAL' &&
+    idCheck === 'PASS' &&
+    isBlack === false &&
+    recentTrans > 0;
+
+  if (!admitted) return undefined;  // rejection cases have no credit_limit formula to verify
+
+  const coefficient = avg3mBalance > 1000 ? 2.3 : avg3mBalance > 0 ? 0.5 : 0.2;
+  const correctLimit = Math.max(0, userLevel * (avg3mBalance / 1000) * monthlySalary * coefficient);
+  const correctStr   = correctLimit.toFixed(2);
+
+  const hints: string[] = [];
+  for (const ar of assertionResults) {
+    if (!ar.passed && ar.path === '//credit_limit' && ar.op === 'eq') {
+      if (ar.actual === correctStr && ar.expected !== correctStr) {
+        hints.push(
+          `⚠️ 疑似用例设计错误：系统返回 ${ar.actual} 符合公式计算结果` +
+          `（${userLevel}×(${avg3mBalance}/1000)×${monthlySalary}×${coefficient}=${correctStr}），` +
+          `期望值 ${ar.expected} 有误——请用 calculate_value 工具核查并更正`
+        );
+      }
+    }
+  }
+
+  return hints.length > 0 ? hints.join('; ') : undefined;
+}
+
 // ── Recommendation generator ─────────────────────────────
 
 function buildRecommendation(results: CaseResult[]): string {
@@ -26,17 +79,27 @@ function buildRecommendation(results: CaseResult[]): string {
   const passRate = total > 0 ? (passed / total) * 100 : 0;
   const p0Failed = results.filter((r) => r.status !== "PASSED" && r.priority === "P0").length;
   const p1Failed = results.filter((r) => r.status !== "PASSED" && r.priority === "P1").length;
+  const designErrors = results.filter((r) => r.design_error_hint).length;
+  const realSystemFailed = failed - designErrors;
 
   const lines: string[] = [];
 
-  if (p0Failed > 0) {
-    lines.push(`❌ 存在 ${p0Failed} 个 P0 核心用例失败，系统存在高风险问题，建议修复后再入库。`);
-  } else if (p1Failed > 0) {
-    lines.push(`⚠️ 存在 ${p1Failed} 个 P1 用例失败，建议评估影响范围后决定是否入库。`);
-  } else if (failed > 0) {
-    lines.push(`ℹ️ 存在 ${failed} 个非核心用例失败，整体风险较低，可入库并跟踪缺陷。`);
-  } else {
+  if (designErrors > 0) {
+    lines.push(`📝 ${designErrors} 个失败用例被标记为「疑似用例设计错误」（期望值写错），请先核查并修正，不代表系统存在缺陷。`);
+  }
+
+  if (realSystemFailed > 0) {
+    if (p0Failed > 0) {
+      lines.push(`❌ 存在 ${p0Failed} 个 P0 核心用例失败，系统存在高风险问题，建议修复后再入库。`);
+    } else if (p1Failed > 0) {
+      lines.push(`⚠️ 存在 ${p1Failed} 个 P1 用例失败，建议评估影响范围后决定是否入库。`);
+    } else {
+      lines.push(`ℹ️ 存在 ${realSystemFailed} 个非核心用例失败，整体风险较低，可入库并跟踪缺陷。`);
+    }
+  } else if (failed === 0) {
     lines.push(`✅ 全部用例通过，质量良好，可以入库。`);
+  } else {
+    lines.push(`✅ 排除用例设计问题后无系统级失败，修正期望值后可重新执行。`);
   }
 
   if (passRate < 80) {
@@ -195,6 +258,7 @@ interface CaseResult {
   db_setup_summary?: string;
   assertions: AssertionResult[];
   error?: string;
+  design_error_hint?: string;  // populated when actual matches formula but expected is wrong
 }
 
 async function runOneCase(tc: any, baseUrl: string, suite: SuiteConfig): Promise<CaseResult> {
@@ -260,6 +324,7 @@ async function runOneCase(tc: any, baseUrl: string, suite: SuiteConfig): Promise
     });
 
     const allPassed = results.every((r) => r.passed);
+    const design_error_hint = allPassed ? undefined : detectCaseDesignHints(tc, results);
 
     return {
       id, name, category, priority, coverage_point,
@@ -271,6 +336,7 @@ async function runOneCase(tc: any, baseUrl: string, suite: SuiteConfig): Promise
       response_body: responseXml,
       db_setup_summary,
       assertions: results,
+      design_error_hint,
     };
   } catch (err: any) {
     return {
@@ -393,7 +459,7 @@ export function createTestRunnerTools(config?: ToolConfig): AgentToolDef[] {
         try {
           const prisma = getPrisma();
           const modeStr = config.mode ?? "systematic";
-          const modeLabel: Record<string, string> = { systematic: "系统化", regression: "回归", exploratory: "探索", chaos: "混沌" };
+          const modeLabel: Record<string, string> = { systematic: "系统化", regression: "回归", exploratory: "探索" };
           const dateStr = new Date().toLocaleDateString("zh-CN", { month: "2-digit", day: "2-digit" }).replace(/\//g, "-");
           const reportName = `${suiteName} [${modeLabel[modeStr] ?? modeStr}] ${dateStr}`;
           const reportRecord = await prisma.testReport.create({
@@ -436,6 +502,7 @@ export function createTestRunnerTools(config?: ToolConfig): AgentToolDef[] {
             id: r.id,
             name: r.name,
             status: r.status,
+            design_error_hint: r.design_error_hint,
             failed_assertions: r.assertions
               .filter((a) => !a.passed)
               .map((a) => `${a.path}: expected=${a.expected} actual=${a.actual}`),
