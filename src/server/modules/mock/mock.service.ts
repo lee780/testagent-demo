@@ -72,7 +72,8 @@ export async function calculateCreditScore(userId: string): Promise<ScoreResult>
   // 并行：本地 DB 指标 + 外部 HTTP 指标
   const [
     [userInfo, accountBalance, socialSecurity, salarySummary],
-    externalInd,
+    stubInd,
+    dbInd,
   ] = await Promise.all([
     Promise.all([
       db.mockUserInfo.findUnique({ where: { userId } }),
@@ -81,6 +82,7 @@ export async function calculateCreditScore(userId: string): Promise<ScoreResult>
       db.mockSalarySummary.findUnique({ where: { userId } }),
     ]),
     fetchExternalIndicators(userId),
+    db.mockExternalIndicator.findUnique({ where: { userId } }),
   ]);
 
   if (!userInfo || !accountBalance || !socialSecurity || !salarySummary) {
@@ -97,20 +99,35 @@ export async function calculateCreditScore(userId: string): Promise<ScoreResult>
   const socialSecurityFlag = socialSecurity.socialSecurityFlag;
   const monthlySalary      = Number(salarySummary.monthlySalary);
 
-  // 外部指标字段（来自合并后的外呼返回体，字段名由挡板配置决定）
-  const cardStatus         = externalInd.cardStatus;
-  const idCheckResult      = externalInd.idCheckResult;
-  const isBlack            = externalInd.isBlack;
-  const recentTransAmount  = externalInd.recentTransAmount;
+  // 外部指标：优先挡板服务器，其次 DB 预置数据，均无则跳过外部检查
+  let externalInd: Record<string, any> = stubInd;
+  if (Object.keys(externalInd).length === 0 && dbInd) {
+    externalInd = {
+      cardStatus:          dbInd.cardStatus,
+      recentTransAmount:   dbInd.recentTransAmount,
+      idCheckResult:       dbInd.idCheckResult,
+      isBlack:             dbInd.isBlack,
+    };
+  }
 
-  // 准入判断：本地指标 + 外部指标全部满足
-  const admitted =
-    monthlySalary > 10000 &&
-    socialSecurityFlag === 1 &&
+  const hasExternalData = Object.keys(externalInd).length > 0;
+  const cardStatus        = externalInd.cardStatus;
+  const idCheckResult     = externalInd.idCheckResult;
+  const isBlack           = externalInd.isBlack;
+  const recentTransAmount = externalInd.recentTransAmount;
+
+  // 准入判断：本地指标必须满足；有外部数据时外部指标也须全部通过
+  const externalOk = !hasExternalData || (
     cardStatus === 'NORMAL' &&
     idCheckResult === 'PASS' &&
     isBlack === false &&
-    Number(recentTransAmount) > 0;
+    Number(recentTransAmount) > 0
+  );
+
+  const admitted =
+    monthlySalary > 10000 &&
+    socialSecurityFlag === 1 &&
+    externalOk;
 
   if (!admitted) {
     return { resultCode: '0000', resultMsg: 'success', admitFlag: '0', creditLimit: '0.00' };
@@ -119,7 +136,7 @@ export async function calculateCreditScore(userId: string): Promise<ScoreResult>
   // 系数：3 档
   const coefficient = avg3mBalance > 1000 ? 2.3 : avg3mBalance > 0 ? 0.5 : 0.2;
 
-  let creditLimit = userLevel * avg3mBalance * monthlySalary * coefficient;
+  let creditLimit = userLevel * (avg3mBalance / 1000) * monthlySalary * coefficient;
   if (creditLimit < 0) creditLimit = 0;
 
   return {

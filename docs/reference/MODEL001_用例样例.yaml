@@ -6,7 +6,7 @@
 #   - preconditions.db_setup 字段名必须与下方保持一致（本地DB指标）
 #   - preconditions.external_setup 字段名对应外部接口挡板指标（必填，影响准入判断）
 #   - assertions.path 使用 //tag 格式提取 XML 响应值
-#   - credit_limit 公式：user_level × avg_3m_balance × monthly_salary × coefficient
+#   - credit_limit 公式：user_level × (avg_3m_balance / 1000) × monthly_salary × coefficient
 #   - coefficient：准入且balance>1000→2.3；准入且0<balance≤1000→0.5；准入且balance≤0→0.2；不准入→0
 #
 # ★ 准入判断：6条全满足才准入
@@ -91,8 +91,8 @@ test_cases:
         desc: 六条准入条件全满足，准入
       - path: "//credit_limit"
         op: eq
-        value: "103500000.00"
-        desc: "额度=2×1500×15000×2.3=103500000.00"
+        value: "103500.00"
+        desc: "额度=2×(1500/1000)×15000×2.3=103500.00"
     notes: "核心正常流程：六条准入全满足 + avg>1000 + 系数2.3"
 
   # ── 用例2：准入，0<avg≤1000，系数0.5 ────────────────────────────────────
@@ -148,8 +148,8 @@ test_cases:
         desc: 满足准入
       - path: "//credit_limit"
         op: eq
-        value: "7500000.00"
-        desc: "额度=2×500×15000×0.5=7500000.00"
+        value: "7500.00"
+        desc: "额度=2×(500/1000)×15000×0.5=7500.00"
     notes: "准入 + 中等资产（0<avg≤1000）→ 系数0.5"
 
   # ── 用例3：准入，负资产，系数0.2，额度归零 ───────────────────────────────

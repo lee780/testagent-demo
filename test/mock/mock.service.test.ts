@@ -6,9 +6,14 @@ import { setupUser, cleanupUser } from './helpers.js';
 const P = 'UT_';
 
 afterEach(async () => {
-  // 清理本轮测试数据
+  // 清理本轮测试数据（序号 + 字母编号 + 外部指标测试）
   for (let i = 1; i <= 30; i++) {
     await cleanupUser(`${P}${String(i).padStart(3, '0')}`).catch(() => {});
+  }
+  for (const suffix of ['TC01','TC02','TC03','TCA1','TCA2','TCA3','TCA4','TCA5',
+                         'TCB1','TCB2','TCB3','TCB4','TCB5','TCC1','TCC2','TCC3','TCC4','TCC5',
+                         'EXT01','EXT02','EXT03','EXT04','EXT05','EXT06','EXT07']) {
+    await cleanupUser(`${P}${suffix}`).catch(() => {});
   }
 });
 
@@ -84,11 +89,11 @@ describe('UT-003 额度计算公式', () => {
     expect(r.creditLimit).toBe('517500.00');
   });
 
-  it('UT-003-02: 等级1，资产1元 1×(1/1000)×10001×2.3≈0.02', async () => {
+  it('UT-003-02: 等级1，资产1元（0<balance≤1000 → 系数0.5）1×(1/1000)×10001×0.5=5.00', async () => {
     await setupUser(`${P}022`, { userLevel: 1, balance: 1, ss: 1, salary: 10001 });
     const r = await calculateCreditScore(`${P}022`);
-    // 1 × 0.001 × 10001 × 2.3 = 23.0023 → 23.00
-    expect(r.creditLimit).toBe('23.00');
+    // 1 × (1/1000) × 10001 × 0.5 = 5.0005 → 5.00
+    expect(r.creditLimit).toBe('5.00');
   });
 
   it('UT-003-03: 等级5，高资产高工资 5×(100000/1000)×100000×2.3=115000000.00', async () => {
@@ -117,6 +122,79 @@ describe('UT-004 数据缺失处理', () => {
   it('UT-004-01: userId不存在 → result_code=0001', async () => {
     const r = await calculateCreditScore('USER_NOT_EXIST_XYZABC');
     expect(r.resultCode).toBe('0001');
+    expect(r.admitFlag).toBe('0');
+    expect(r.creditLimit).toBe('0.00');
+  });
+});
+
+// ─── UT-005：外部指标 DB 回退逻辑 ────────────────────────────────────────────
+
+describe('UT-005 外部指标 DB 回退逻辑', () => {
+  it('UT-005-01: 无外部数据时跳过外部检查，满足本地条件即准入', async () => {
+    // 不设置 external — 应跳过外部检查
+    await setupUser(`${P}EXT01`, { userLevel: 1, balance: 5000, ss: 1, salary: 15000 });
+    const r = await calculateCreditScore(`${P}EXT01`);
+    expect(r.admitFlag).toBe('1');
+    expect(r.creditLimit).toBe('172500.00');
+  });
+
+  it('UT-005-02: DB 有外部指标且全部通过 → 准入', async () => {
+    await setupUser(`${P}EXT02`, {
+      userLevel: 2, balance: 5000, ss: 1, salary: 15000,
+      external: { cardStatus: 'NORMAL', idCheckResult: 'PASS', isBlack: false, recentTransAmount: 1000 },
+    });
+    const r = await calculateCreditScore(`${P}EXT02`);
+    expect(r.admitFlag).toBe('1');
+    expect(r.creditLimit).toBe('345000.00');
+  });
+
+  it('UT-005-03: DB 外部指标 cardStatus=BLOCKED → 不准入', async () => {
+    await setupUser(`${P}EXT03`, {
+      userLevel: 1, balance: 5000, ss: 1, salary: 15000,
+      external: { cardStatus: 'BLOCKED', idCheckResult: 'PASS', isBlack: false, recentTransAmount: 1000 },
+    });
+    const r = await calculateCreditScore(`${P}EXT03`);
+    expect(r.admitFlag).toBe('0');
+    expect(r.creditLimit).toBe('0.00');
+  });
+
+  it('UT-005-04: DB 外部指标 isBlack=true → 不准入', async () => {
+    await setupUser(`${P}EXT04`, {
+      userLevel: 1, balance: 5000, ss: 1, salary: 15000,
+      external: { cardStatus: 'NORMAL', idCheckResult: 'PASS', isBlack: true, recentTransAmount: 1000 },
+    });
+    const r = await calculateCreditScore(`${P}EXT04`);
+    expect(r.admitFlag).toBe('0');
+    expect(r.creditLimit).toBe('0.00');
+  });
+
+  it('UT-005-05: DB 外部指标 idCheckResult=FAIL → 不准入', async () => {
+    await setupUser(`${P}EXT05`, {
+      userLevel: 1, balance: 5000, ss: 1, salary: 15000,
+      external: { cardStatus: 'NORMAL', idCheckResult: 'FAIL', isBlack: false, recentTransAmount: 1000 },
+    });
+    const r = await calculateCreditScore(`${P}EXT05`);
+    expect(r.admitFlag).toBe('0');
+    expect(r.creditLimit).toBe('0.00');
+  });
+
+  it('UT-005-06: DB 外部指标 recentTransAmount=0 → 不准入', async () => {
+    await setupUser(`${P}EXT06`, {
+      userLevel: 1, balance: 5000, ss: 1, salary: 15000,
+      external: { cardStatus: 'NORMAL', idCheckResult: 'PASS', isBlack: false, recentTransAmount: 0 },
+    });
+    const r = await calculateCreditScore(`${P}EXT06`);
+    expect(r.admitFlag).toBe('0');
+    expect(r.creditLimit).toBe('0.00');
+  });
+
+  it('UT-005-07: 本地条件不满足时即使外部指标通过也不准入', async () => {
+    // salary=9000 不满足 >10000
+    await setupUser(`${P}EXT07`, {
+      userLevel: 1, balance: 5000, ss: 1, salary: 9000,
+      external: { cardStatus: 'NORMAL', idCheckResult: 'PASS', isBlack: false, recentTransAmount: 1000 },
+    });
+    const r = await calculateCreditScore(`${P}EXT07`);
     expect(r.admitFlag).toBe('0');
     expect(r.creditLimit).toBe('0.00');
   });
