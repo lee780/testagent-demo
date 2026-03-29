@@ -8,6 +8,8 @@ export { createDatabaseTools } from "./database-ops.js";
 export { createTestRunnerTools } from "./test-runner.js";
 export { createToolConfig, assertWithinWorkspace } from "./config.js";
 export { createProgressReporterTool } from "./progress-reporter.js";
+export { createCalcExpectedTool } from "./calc-expected.js";
+export { createSaveSummaryReportTool } from "./save-summary-report.js";
 export type { ToolConfig } from "./config.js";
 export type { AgentToolDef, AgentToolResult } from "./code-index.js";
 
@@ -18,6 +20,8 @@ import { createTestExecutorTools } from "./test-executor.js";
 import { createDatabaseTools } from "./database-ops.js";
 import { createTestRunnerTools } from "./test-runner.js";
 import { createProgressReporterTool } from "./progress-reporter.js";
+import { createCalcExpectedTool } from "./calc-expected.js";
+import { createSaveSummaryReportTool } from "./save-summary-report.js";
 
 /**
  * Build the full set of custom tools for TestAgent.
@@ -29,6 +33,8 @@ export function buildCustomTools(config: ToolConfig): AgentToolDef[] {
     ...createTestExecutorTools(),
     ...createDatabaseTools(),
     ...createTestRunnerTools(config),
+    createCalcExpectedTool(),
+    createSaveSummaryReportTool(),
   ];
   if (config.onStageUpdate) {
     tools.push(createProgressReporterTool(config.onStageUpdate));

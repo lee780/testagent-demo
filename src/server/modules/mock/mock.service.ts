@@ -67,6 +67,10 @@ async function fetchExternalIndicators(userId: string): Promise<Record<string, a
 // ── 核心计算 ──────────────────────────────────────────────
 
 export async function calculateCreditScore(userId: string): Promise<ScoreResult> {
+  if (!userId || userId.trim() === '') {
+    return { resultCode: '9999', resultMsg: '参数错误：user_id不能为空', admitFlag: '', creditLimit: '' };
+  }
+
   const db = getPrisma();
 
   // 并行：本地 DB 指标 + 外部 HTTP 指标

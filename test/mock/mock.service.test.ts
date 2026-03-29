@@ -125,6 +125,20 @@ describe('UT-004 数据缺失处理', () => {
     expect(r.admitFlag).toBe('0');
     expect(r.creditLimit).toBe('0.00');
   });
+
+  it('UT-004-02: userId为空字符串 → result_code=9999 参数错误', async () => {
+    const r = await calculateCreditScore('');
+    expect(r.resultCode).toBe('9999');
+    expect(r.resultMsg).toContain('参数错误');
+    expect(r.admitFlag).toBe('');
+    expect(r.creditLimit).toBe('');
+  });
+
+  it('UT-004-03: userId为空白字符串 → result_code=9999 参数错误', async () => {
+    const r = await calculateCreditScore('   ');
+    expect(r.resultCode).toBe('9999');
+    expect(r.resultMsg).toContain('参数错误');
+  });
 });
 
 // ─── UT-005：外部指标 DB 回退逻辑 ────────────────────────────────────────────
