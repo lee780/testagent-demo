@@ -1,0 +1,1268 @@
+# MODEL_001 授信额度测算 v2.0 - 边界值完整测试用例
+# 覆盖 6 个准入条件的全组合 + 系数 3 档的边界值
+# 使用外部接口挡板模拟外部指标
+
+suite:
+  id: SUITE_MODEL001_V2_BOUNDARY
+  name: "MODEL_001 v2.0 授信额度测算 - 边界值分析测试"
+  model_id: MODEL_001
+  endpoint: /mock/model/score
+  method: POST
+  content_type: application/xml
+
+test_cases:
+
+  # ────────── PART A: 月薪边界值 (>10000) ───────────────────
+
+  - id: TC_M001_A01
+    name: "A01-月薪临界下界 -9999(不准入)"
+    category: 边界值
+    priority: P0
+    coverage_point: "边界值/月薪/下界 -9999(不满足>10000)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_A01"
+          user_level: 3
+        account_balance:
+          user_id: "TC_A01"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_A01"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_A01"
+          monthly_salary: 9999
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_A01</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params>
+            <sx_trace_id>TRACE_A01</sx_trace_id>
+            <corp_id></corp_id>
+            <person_name>测试用户 A01</person_name>
+          </business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: "月薪 9999 不大于 10000，不准入"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+    notes: "边界值：月薪=9999(临界点下方)"
+
+  - id: TC_M001_A02
+    name: "A02-月薪临界值 -10000(不准入，等于不行)"
+    priority: P0
+    coverage_point: "边界值/月薪/临界点 -10000(等于不满足>)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_A02"
+          user_level: 3
+        account_balance:
+          user_id: "TC_A02"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_A02"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_A02"
+          monthly_salary: 10000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_A02</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_A02</sx_trace_id><person_name>测试用户 A02</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: "月薪=10000 不满足>10000 的条件"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+    notes: "边界值：月薪=10000(等于门槛仍不准入)"
+
+  - id: TC_M001_A03
+    name: "A03-月薪刚过门槛 -10001(准入)"
+    priority: P0
+    coverage_point: "边界值/月薪/上界 -10001(刚刚满足>)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_A03"
+          user_level: 3
+        account_balance:
+          user_id: "TC_A03"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_A03"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_A03"
+          monthly_salary: 10001
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_A03</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_A03</sx_trace_id><person_name>测试用户 A03</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: "月薪 10001>10000，刚刚满足准入"
+      - path: "//credit_limit"
+        op: gt
+        value: "0"
+    notes: "边界值：月薪=10001(刚刚超过门槛)"
+
+  - id: TC_M001_A04
+    name: "A04-月薪极低值 -1(最小合法)"
+    priority: P1
+    coverage_point: "边界值/月薪/下极限 -1(最小正整数)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_A04"
+          user_level: 1
+        account_balance:
+          user_id: "TC_A04"
+          avg_3m_balance: 1000
+        cgs_social_security:
+          user_id: "TC_A04"
+          social_security_flag: 0
+        mock_salary_summary:
+          user_id: "TC_A04"
+          monthly_salary: 1
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_A04</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_A04</sx_trace_id><person_name>测试用户 A04</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+    notes: "月薪=1(最小值),社保=0,双重不满足"
+
+  # ────────── PART B: 社保状态边界 (必须=1) ────────────────
+
+  - id: TC_M001_B01
+    name: "B01-社保无 (0)-不准入"
+    priority: P0
+    coverage_point: "边界值/社保/值 -0(无社保)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_B01"
+          user_level: 3
+        account_balance:
+          user_id: "TC_B01"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_B01"
+          social_security_flag: 0
+        mock_salary_summary:
+          user_id: "TC_B01"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_B01</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_B01</sx_trace_id><person_name>测试用户 B01</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: "社保=0,不满足社保=1 的准入要求"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+    notes: "社保标志=0(无社保)"
+
+  - id: TC_M001_B02
+    name: "B02-社保有 (1)-准入"
+    priority: P0
+    coverage_point: "边界值/社保/值 -1(有社保)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_B02"
+          user_level: 3
+        account_balance:
+          user_id: "TC_B02"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_B02"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_B02"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_B02</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_B02</sx_trace_id><person_name>测试用户 B02</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: "社保=1(有社保),满足准入"
+      - path: "//credit_limit"
+        op: gt
+        value: "0"
+    notes: "社保标志=1(有社保)"
+
+  # ────────── PART C: 银行卡状态边界 ───────────────────────
+
+  - id: TC_M001_C01
+    name: "C01-银行卡 NORMAL-准入必要条件"
+    priority: P0
+    coverage_point: "边界值/银行卡/值-NORMAL(正常)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_C01"
+          user_level: 3
+        account_balance:
+          user_id: "TC_C01"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_C01"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_C01"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_C01</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_C01</sx_trace_id><person_name>测试用户 C01</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: "card_status=NORMAL，满足准入条件"
+      - path: "//credit_limit"
+        op: gt
+        value: "0"
+    notes: "银行卡状态=NORMAL(正常)"
+
+  - id: TC_M001_C02
+    name: "C02-银行卡 ABNORMAL-不准入"
+    priority: P0
+    coverage_point: "边界值/银行卡/值-ABNORMAL(异常)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_C02"
+          user_level: 3
+        account_balance:
+          user_id: "TC_C02"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_C02"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_C02"
+          monthly_salary: 15000
+      external_setup:
+        card_status: ABNORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_C02</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_C02</sx_trace_id><person_name>测试用户 C02</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: "card_status≠NORMAL，不准入"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+    notes: "银行卡状态=ABNORMAL(异常)"
+
+  # ────────── PART D: 身份核验结果边界 ─────────────────────
+
+  - id: TC_M001_D01
+    name: "D01-身份核验 PASS-准入"
+    priority: P0
+    coverage_point: "边界值/身份核验/值-PASS(通过)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_D01"
+          user_level: 3
+        account_balance:
+          user_id: "TC_D01"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_D01"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_D01"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_D01</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_D01</sx_trace_id><person_name>测试用户 D01</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+      - path: "//credit_limit"
+        op: gt
+        value: "0"
+    notes: "身份核验=PASS(通过)"
+
+  - id: TC_M001_D02
+    name: "D02-身份核验 FAIL-不准入"
+    priority: P0
+    coverage_point: "边界值/身份核验/值-FAIL(失败)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_D02"
+          user_level: 3
+        account_balance:
+          user_id: "TC_D02"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_D02"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_D02"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: FAIL
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_D02</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_D02</sx_trace_id><person_name>测试用户 D02</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: "id_check_result≠PASS，不准入"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+    notes: "身份核验=FAIL(失败)"
+
+  # ────────── PART E: 黑名单边界 ───────────────────────────
+
+  - id: TC_M001_E01
+    name: "E01-黑名单=false(非黑名单)-准入条件"
+    priority: P0
+    coverage_point: "边界值/黑名单/值-false(非黑)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_E01"
+          user_level: 3
+        account_balance:
+          user_id: "TC_E01"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_E01"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_E01"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_E01</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_E01</sx_trace_id><person_name>测试用户 E01</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+      - path: "//credit_limit"
+        op: gt
+        value: "0"
+    notes: "is_black=false(非黑名单)"
+
+  - id: TC_M001_E02
+    name: "E02-黑名单=true(黑名单)-不准入"
+    priority: P0
+    coverage_point: "边界值/黑名单/值-true(黑名单)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_E02"
+          user_level: 3
+        account_balance:
+          user_id: "TC_E02"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_E02"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_E02"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: true
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_E02</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_E02</sx_trace_id><person_name>测试用户 E02</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: "is_black=true(黑名单),不准入"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+    notes: "is_black=true(黑名单)"
+
+  # ────────── PART F: 近期交易额边界 (>0) ──────────────────
+
+  - id: TC_M001_F01
+    name: "F01-交易额 0-不准入"
+    priority: P0
+    coverage_point: "边界值/交易额/下界 -0(不大于 0)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_F01"
+          user_level: 3
+        account_balance:
+          user_id: "TC_F01"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_F01"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_F01"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 0
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_F01</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_F01</sx_trace_id><person_name>测试用户 F01</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: "recent_trans_amount=0,不满足>0 条件"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+    notes: "交易额=0(临界点，需>0)"
+
+  - id: TC_M001_F02
+    name: "F02-交易额 0.01-刚过门槛"
+    priority: P0
+    coverage_point: "边界值/交易额/上界 -0.01(微小正数)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_F02"
+          user_level: 3
+        account_balance:
+          user_id: "TC_F02"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_F02"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_F02"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 0.01
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_F02</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_F02</sx_trace_id><person_name>测试用户 F02</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: "交易额 0.01>0，刚过门槛"
+      - path: "//credit_limit"
+        op: gt
+        value: "0"
+    notes: "交易额=0.01(微小正数，刚>0)"
+
+  # ────────── PART G: 系数三档边界 (avg_3m_balance) ────────
+  # 系数规则：>1000->2.3; 0<x<=1000->0.5; <=0->0.2
+
+  - id: TC_M001_G01
+    name: "G01-余额 -100(负资产，系数 0.2)"
+    priority: P0
+    coverage_point: "边界值/月均余额/系数档位 - 负资产区"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_G01"
+          user_level: 3
+        account_balance:
+          user_id: "TC_G01"
+          avg_3m_balance: -100
+        cgs_social_security:
+          user_id: "TC_G01"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_G01"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_G01</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_G01</sx_trace_id><person_name>测试用户 G01</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: "准入条件满足"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+    notes: "余额=-100≤0，系数=0.2"
+
+  - id: TC_M001_G02
+    name: "G02-余额 0(边界，系数 0.2)"
+    priority: P0
+    coverage_point: "边界值/月均余额/临界点 -0(小于等于 0)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_G02"
+          user_level: 3
+        account_balance:
+          user_id: "TC_G02"
+          avg_3m_balance: 0
+        cgs_social_security:
+          user_id: "TC_G02"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_G02"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_G02</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_G02</sx_trace_id><person_name>测试用户 G02</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: "准入条件满足"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+        desc: "余额=0，系数 0.2，结果为 0"
+    notes: "余额=0(≤0 临界点),系数=0.2,结果=0"
+
+  - id: TC_M001_G03
+    name: "G03-余额 0.01(微正，系数 0.5)"
+    priority: P0
+    coverage_point: "边界值/月均余额/系数档位 0.5 下界"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_G03"
+          user_level: 3
+        account_balance:
+          user_id: "TC_G03"
+          avg_3m_balance: 0.01
+        cgs_social_security:
+          user_id: "TC_G03"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_G03"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_G03</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_G03</sx_trace_id><person_name>测试用户 G03</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: "准入"
+      - path: "//credit_limit"
+        op: gt
+        value: "0"
+    notes: "余额=0.01(0<x≤1000 下界),系数=0.5"
+
+  - id: TC_M001_G04
+    name: "G04-余额 1000(系数 0.5 上界)"
+    priority: P0
+    coverage_point: "边界值/月均余额/临界点 -1000(0<x≤1000 的上界)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_G04"
+          user_level: 3
+        account_balance:
+          user_id: "TC_G04"
+          avg_3m_balance: 1000
+        cgs_social_security:
+          user_id: "TC_G04"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_G04"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_G04</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_G04</sx_trace_id><person_name>测试用户 G04</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: "准入"
+      - path: "//credit_limit"
+        op: eq
+        value: "69000.00"
+    notes: "余额=1000(0<x≤1000 上界),系数=0.5"
+
+  - id: TC_M001_G05
+    name: "G05-余额 1001(系数 2.3 下界)"
+    priority: P0
+    coverage_point: "边界值/月均余额/临界点 -1001(>1000 的下界)"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_G05"
+          user_level: 3
+        account_balance:
+          user_id: "TC_G05"
+          avg_3m_balance: 1001
+        cgs_social_security:
+          user_id: "TC_G05"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_G05"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_G05</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_G05</sx_trace_id><person_name>测试用户 G05</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: "准入"
+      - path: "//credit_limit"
+        op: eq
+        value: "3128100.00"
+    notes: "余额=1001(>1000 下界),系数=2.3"
+
+  - id: TC_M001_G06
+    name: "G06-余额 2000(高余额，系数 2.3)"
+    priority: P1
+    coverage_point: "边界值/月均余额/系数档位 - 高资产区"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_G06"
+          user_level: 5
+        account_balance:
+          user_id: "TC_G06"
+          avg_3m_balance: 2000
+        cgs_social_security:
+          user_id: "TC_G06"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_G06"
+          monthly_salary: 20000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_G06</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_G06</sx_trace_id><person_name>测试用户 G06</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: "准入"
+      - path: "//credit_limit"
+        op: eq
+        value: "9200000.00"
+    notes: "余额=2000(>1000 高资产),系数=2.3"
+
+  # ────────── PART H: 6 个准入条件全组合场景 ───────────────
+
+  - id: TC_M001_H01
+    name: "H01-全满足 - 正常准入"
+    priority: P0
+    coverage_point: "综合场景/全条件满足/正常准入流程"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_H01"
+          user_level: 3
+        account_balance:
+          user_id: "TC_H01"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_H01"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_H01"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_H01</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_H01</sx_trace_id><person_name>测试用户 H01</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "1"
+        desc: "6 个条件全部满足，准入通过"
+      - path: "//credit_limit"
+        op: gt
+        value: "0"
+    notes: "全满足：工资>10000 ✓ 社保=1 ✓ 卡状=NORMAL ✓ 核验=PASS ✓ 黑名单=false ✓ 交易额>0 ✓"
+
+  - id: TC_M001_H02
+    name: "H02-仅缺交易额 - 其他 5 项满足"
+    priority: P0
+    coverage_point: "综合场景/单个条件缺失/仅交易额不满足"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_H02"
+          user_level: 3
+        account_balance:
+          user_id: "TC_H02"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_H02"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_H02"
+          monthly_salary: 15000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 0
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_H02</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_H02</sx_trace_id><person_name>测试用户 H02</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: "交易额=0，6 条件缺一不准入"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+    notes: "5 项满足但交易额=0，不通过"
+
+  - id: TC_M001_H03
+    name: "H03-双不满足 - 工资低且无社保"
+    priority: P1
+    coverage_point: "综合场景/多条件缺失/DB 条件双缺"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_H03"
+          user_level: 1
+        account_balance:
+          user_id: "TC_H03"
+          avg_3m_balance: 1000
+        cgs_social_security:
+          user_id: "TC_H03"
+          social_security_flag: 0
+        mock_salary_summary:
+          user_id: "TC_H03"
+          monthly_salary: 5000
+      external_setup:
+        card_status: NORMAL
+        id_check_result: PASS
+        is_black: false
+        recent_trans_amount: 5800
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_H03</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_H03</sx_trace_id><person_name>测试用户 H03</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: "DB 条件双缺：工资不足且无社保"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+    notes: "DB 条件两个都不满足"
+
+  - id: TC_M001_H04
+    name: "H04-三不满足 - 外部条件缺三项"
+    priority: P1
+    coverage_point: "综合场景/多条件缺失/外部条件缺 3"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_H04"
+          user_level: 3
+        account_balance:
+          user_id: "TC_H04"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_H04"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_H04"
+          monthly_salary: 15000
+      external_setup:
+        card_status: ABNORMAL
+        id_check_result: FAIL
+        is_black: true
+        recent_trans_amount: 0
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_H04</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_H04</sx_trace_id><person_name>测试用户 H04</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: "外部条件缺 3 项：卡状异常 + 核验失败 + 黑名单 + 交易额为 0"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+    notes: "外部条件多项不满足"
+
+  - id: TC_M001_H05
+    name: "H05-六项全不满足 - 最差用户"
+    priority: P2
+    coverage_point: "综合场景/全条件不满足/最弱用户场景"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_H05"
+          user_level: 1
+        account_balance:
+          user_id: "TC_H05"
+          avg_3m_balance: -1000
+        cgs_social_security:
+          user_id: "TC_H05"
+          social_security_flag: 0
+        mock_salary_summary:
+          user_id: "TC_H05"
+          monthly_salary: 1
+      external_setup:
+        card_status: ABNORMAL
+        id_check_result: FAIL
+        is_black: true
+        recent_trans_amount: 0
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_H05</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_H05</sx_trace_id><person_name>测试用户 H05</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: "所有条件都不满足"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+    notes: "6 个准入条件全不满足的最差用户"
+
+  - id: TC_M001_H06
+    name: "H06-仅 DB 两项满足 - 外部全缺"
+    priority: P2
+    coverage_point: "综合场景/部分条件满足/仅 DB 条件满足"
+    preconditions:
+      db_setup:
+        user_info:
+          user_id: "TC_H06"
+          user_level: 3
+        account_balance:
+          user_id: "TC_H06"
+          avg_3m_balance: 5000
+        cgs_social_security:
+          user_id: "TC_H06"
+          social_security_flag: 1
+        mock_salary_summary:
+          user_id: "TC_H06"
+          monthly_salary: 15000
+      external_setup:
+        card_status: ABNORMAL
+        id_check_result: FAIL
+        is_black: true
+        recent_trans_amount: 0
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>TC_H06</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_H06</sx_trace_id><person_name>测试用户 H06</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0000"
+      - path: "//admit_flag"
+        op: eq
+        value: "0"
+        desc: "DB 条件满足但外部条件全不满足"
+      - path: "//credit_limit"
+        op: eq
+        value: "0.00"
+    notes: "仅有 DB 的两个条件满足"
+
+  # ────────── PART I: 错误场景 ─────────────────────────────
+
+  - id: TC_M001_I01
+    name: "I01-user_id 为空 - 参数错误"
+    priority: P0
+    coverage_point: "错误场景/输入参数/user_id 为空"
+    preconditions: {}
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id></user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_I01</sx_trace_id><person_name>测试用户 I01</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "9999"
+        desc: "user_id 为空，参数错误"
+      - path: "//result_msg"
+        op: contains
+        value: 参数错误
+    notes: "user_id 参数缺失应返回 9999"
+
+  - id: TC_M001_I02
+    name: "I02-用户不存在-data 未找到"
+    priority: P0
+    coverage_point: "错误场景/数据不存在/用户信息缺失"
+    preconditions: {}
+    request:
+      body: |
+        <?xml version="1.0" encoding="utf-8"?>
+        <REQUEST>
+          <user_id>NON_EXIST_USER</user_id>
+          <model_id>MODEL_001</model_id>
+          <channel>131</channel>
+          <business_params><sx_trace_id>TRACE_I02</sx_trace_id><person_name>测试用户 I02</person_name></business_params>
+        </REQUEST>
+    assertions:
+      - path: "//result_code"
+        op: eq
+        value: "0001"
+        desc: "用户不存在"
+      - path: "//result_msg"
+        op: contains
+        value: 不存在
+    notes: "用户在所有表中都无记录应返回 0001"
+
+
+# ════════════════════════════════════════════════════════════
+# 总结
+# 共 36 条测试用例，覆盖：
+# - A 组 (A01-A04): 月薪边界 -4 条
+# - B 组 (B01-B02): 社保边界 -2 条  
+# - C 组 (C01-C02): 银行卡边界 -2 条
+# - D 组 (D01-D02): 身份核验边界 -2 条
+# - E 组 (E01-E02): 黑名单边界 -2 条
+# - F 组 (F01-F02): 交易额边界 -2 条
+# - G 组 (G01-G06): 余额系数边界 -6 条
+# - H 组 (H01-H06): 6 条件组合 -6 条
+# - I 组 (I01-I02): 错误场景 -2 条
+# =================================================================

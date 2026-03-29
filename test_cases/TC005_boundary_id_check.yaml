@@ -1,0 +1,30 @@
+# 身份核验边界值测试
+test_case_id: TC005
+description: "身份核验失败，应拒绝准入"
+setup:
+  userId: "test_005"
+  userLevel: 2
+  avg3mBalance: 1500
+  socialSecurityFlag: 1
+  monthlySalary: 15000
+  external_setup:
+    card_status: "NORMAL"
+    recent_trans_amount: 5800
+    id_check_result: "FAIL"  # 边界值
+    is_black: false
+request:
+  url: "/mock/model/score"
+  method: "POST"
+  headers:
+    Content-Type: "application/xml"
+  body: |
+    <REQUEST>
+      <user_id>test_005</user_id>
+    </REQUEST>
+assertions:
+  - type: "equals"
+    expression: "result_code"
+    expected: "0000"
+  - type: "equals"
+    expression: "admit_flag"
+    expected: "0"  # 应该被拒绝

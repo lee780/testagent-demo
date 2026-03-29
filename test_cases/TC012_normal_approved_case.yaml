@@ -1,0 +1,33 @@
+# 正常准入案例
+test_case_id: TC012
+description: "正常准入案例，所有条件都满足"
+setup:
+  userId: "test_012"
+  userLevel: 2
+  avg3mBalance: 1500
+  socialSecurityFlag: 1
+  monthlySalary: 15000
+  external_setup:
+    card_status: "NORMAL"
+    recent_trans_amount: 5800
+    id_check_result: "PASS"
+    is_black: false
+request:
+  url: "/mock/model/score"
+  method: "POST"
+  headers:
+    Content-Type: "application/xml"
+  body: |
+    <REQUEST>
+      <user_id>test_012</user_id>
+    </REQUEST>
+assertions:
+  - type: "equals"
+    expression: "result_code"
+    expected: "0000"
+  - type: "equals"
+    expression: "admit_flag"
+    expected: "1"  # 应该准入
+  - type: "equals"
+    expression: "credit_limit"
+    expected: "103500000.00"  # 2 * 1500 * 15000 * 2.3 = 103,500,000

@@ -1,0 +1,30 @@
+# 月收入边界值测试 - 刚好高于准入线
+test_case_id: TC002
+description: "月收入刚好高于准入线10000元，应准入"
+setup:
+  userId: "test_002"
+  userLevel: 2
+  avg3mBalance: 1500
+  socialSecurityFlag: 1
+  monthlySalary: 10000.01  # 边界值
+  external_setup:
+    card_status: "NORMAL"
+    recent_trans_amount: 5800
+    id_check_result: "PASS"
+    is_black: false
+request:
+  url: "/mock/model/score"
+  method: "POST"
+  headers:
+    Content-Type: "application/xml"
+  body: |
+    <REQUEST>
+      <user_id>test_002</user_id>
+    </REQUEST>
+assertions:
+  - type: "equals"
+    expression: "result_code"
+    expected: "0000"
+  - type: "equals"
+    expression: "admit_flag"
+    expected: "1"  # 应该准入

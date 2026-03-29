@@ -1,0 +1,16 @@
+# 无效用户ID测试案例
+test_case_id: TC014
+description: "用户ID为空，应返回参数错误"
+request:
+  url: "/mock/model/score"
+  method: "POST"
+  headers:
+    Content-Type: "application/xml"
+  body: |
+    <REQUEST>
+      <user_id></user_id>
+    </REQUEST>
+assertions:
+  - type: "equals"
+    expression: "result_code"
+    expected: "9999"  # 参数错误
