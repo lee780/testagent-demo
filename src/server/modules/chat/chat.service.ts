@@ -119,7 +119,7 @@ export interface SSEStreamOptions {
   userId: string;
   conversationId?: string | null;
   uploadedFiles?: string[];
-  mode?: 'regression' | 'systematic' | 'exploratory' | 'chaos';
+  mode?: 'regression' | 'systematic' | 'exploratory';
   modelId?: string;   // 绑定知识库的被测模型 ID（如 "MODEL_001"）
 }
 

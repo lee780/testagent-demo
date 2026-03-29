@@ -25,7 +25,7 @@
         </el-table-column>
         <el-table-column width="110">
           <template #header>
-            <el-tooltip content="系统化：BVA边界值全量覆盖 | 回归：基于基线用例精准验证 | 探索：LLM自由假设挖掘非常规缺陷 | 混沌：双系统对比差异" placement="top">
+            <el-tooltip content="系统化：BVA边界值全量覆盖 | 回归：基于基线用例精准验证 | 探索：LLM自由假设挖掘非常规缺陷" placement="top">
               <span>执行模式 <span class="col-hint">ⓘ</span></span>
             </el-tooltip>
           </template>
@@ -118,14 +118,12 @@ const MODE_LABELS = {
   systematic: '系统化',
   regression: '回归',
   exploratory: '探索',
-  chaos: '混沌',
   agent: 'Agent',
 }
 const MODE_TAG_TYPES = {
   systematic: 'primary',
   regression: 'success',
   exploratory: 'warning',
-  chaos: 'danger',
 }
 
 function modeLabel(mode) {

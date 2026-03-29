@@ -58,6 +58,14 @@
       <!-- 3. Tabs -->
       <el-tabs v-model="activeTab" class="detail-tabs">
 
+        <!-- Tab: 测试汇报 -->
+        <el-tab-pane label="测试汇报" name="summary">
+          <div v-if="report.summaryReport" class="summary-report-wrap">
+            <MarkdownViewer :content="report.summaryReport" />
+          </div>
+          <div v-else class="empty-tip">Agent 尚未生成测试汇报。新执行的测试将自动生成。</div>
+        </el-tab-pane>
+
         <!-- Tab: 执行结果 -->
         <el-tab-pane label="执行结果" name="results">
           <!-- Failed cases summary -->
@@ -403,6 +411,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import MarkdownViewer from '../components/MarkdownViewer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -564,8 +573,8 @@ function defectStatusLabel(s) { return DEFECT_STATUS_LABELS[s] || s }
 function defectStatusType(s) { return DEFECT_STATUS_TYPES[s] || 'info' }
 function severityType(s) { return SEVERITY_TYPES[s] ?? '' }
 
-const MODE_LABELS = { systematic: '系统化', regression: '回归', exploratory: '探索', chaos: '混沌' }
-const MODE_TYPES  = { systematic: 'primary', regression: 'success', exploratory: 'warning', chaos: 'danger' }
+const MODE_LABELS = { systematic: '系统化', regression: '回归', exploratory: '探索' }
+const MODE_TYPES  = { systematic: 'primary', regression: 'success', exploratory: 'warning' }
 const STATUS_LABELS = { DRAFT: '草稿', PENDING_REVIEW: '待审核', APPROVED: '已审批', BASELINE: '基线', DEPRECATED: '已废弃' }
 const STATUS_TYPES  = { DRAFT: 'info', PENDING_REVIEW: 'warning', APPROVED: 'success', BASELINE: 'primary', DEPRECATED: 'danger' }
 
@@ -976,6 +985,7 @@ onMounted(async () => {
 .defect-link { color: #5b9bd5; text-decoration: none; }
 .defect-link:hover { text-decoration: underline; }
 .empty-tip { color: var(--text-secondary); text-align: center; padding: 48px; }
+.summary-report-wrap { padding: 8px 4px; max-width: 860px; }
 
 /* Loading */
 .loading-tip { color: var(--text-secondary); text-align: center; padding: 48px; }

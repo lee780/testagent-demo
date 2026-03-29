@@ -175,7 +175,6 @@ it('AI 分析后 aiAnalysis 字段不为空', async () => {
 | regression | "REGRESSION MODE"、"FORBIDDEN"、"NEVER generate" | 任何生成指令 |
 | systematic | "SYSTEMATIC MODE"、"BVA"、"NEVER use random values" | 随机 ID 生成 |
 | exploratory | "EXPLORATORY MODE"、"Hypothesis-Driven" | 固定用例清单 |
-| chaos | "CHAOS"、"localhost:8000"、"localhost:8001" | 单系统运行 |
 
 ### 5.2 实现完成后立即执行多轮测试
 

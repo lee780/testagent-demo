@@ -440,14 +440,6 @@ const testModes = [
     color: '#e6a23c',
     bg: 'rgba(230,162,60,0.10)',
   },
-  {
-    value: 'chaos',
-    icon: '🌪️',
-    label: '混沌对比',
-    desc: '混沌/对比模式：双系统同时运行，自动识别差异与回归',
-    color: '#f56c6c',
-    bg: 'rgba(245,108,108,0.10)',
-  },
 ]
 
 const selectedFiles = ref([])

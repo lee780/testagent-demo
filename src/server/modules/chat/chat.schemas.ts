@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const TEST_MODES = ['regression', 'systematic', 'exploratory', 'chaos'] as const;
+export const TEST_MODES = ['regression', 'systematic', 'exploratory'] as const;
 export type TestMode = typeof TEST_MODES[number];
 
 export const chatMessageSchema = z.object({

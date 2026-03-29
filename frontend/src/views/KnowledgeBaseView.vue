@@ -173,7 +173,6 @@
             <el-option label="系统化（systematic）" value="systematic" />
             <el-option label="回归（regression）" value="regression" />
             <el-option label="探索（exploratory）" value="exploratory" />
-            <el-option label="混沌（chaos）" value="chaos" />
           </el-select>
         </el-form-item>
         <el-form-item label="规范名称" required>

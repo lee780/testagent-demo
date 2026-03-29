@@ -1,9 +1,9 @@
 /**
  * System Prompt builder for TestAgent.
- * Supports four test modes, each with distinct behavior and constraints.
+ * Supports three test modes, each with distinct behavior and constraints.
  */
 
-export type TestMode = 'regression' | 'systematic' | 'exploratory' | 'chaos';
+export type TestMode = 'regression' | 'systematic' | 'exploratory';
 
 export interface SystemPromptParams {
   workspace: string;
@@ -24,9 +24,6 @@ export function buildSystemPrompt(params: SystemPromptParams): string {
       break;
     case 'exploratory':
       modePrompt = buildExploratoryPrompt(params.workspace);
-      break;
-    case 'chaos':
-      modePrompt = buildChaosPrompt(params.workspace);
       break;
     default:
       modePrompt = buildSystematicPrompt(params.workspace);
@@ -58,6 +55,8 @@ read, write, edit, bash, grep, find, ls
 
 ### Testing Tools
 - **run_test_suite**: PRIMARY TOOL — Reads all *.yaml test case files from a directory, sets up DB preconditions, executes HTTP requests, validates XML response assertions, auto-saves report to DB. Parameters: yaml_dir (required), base_url (default: http://localhost:8000).
+- **save_summary_report**: REQUIRED after run_test_suite — saves the full Markdown test summary to the report record (displayed in the 「测试汇报」tab). Parameters: report_id (from run_test_suite result), content (Markdown). Must be called before reporting to the user.
+- **calculate_value**: REQUIRED before writing any expectedResult — evaluates a math expression and returns the precise result (rounded to 2 decimal places, negative → 0). Example: \`calculate_value(expression="2 * (1500/1000) * 10000 * 2.3")\` → 69000.00. Never hardcode expectedResult without calling this tool first.
 - **validate_response**: Validate a single API response against assertion rules
 - **capture_metrics**: Analyze test results for performance statistics
 
@@ -88,7 +87,7 @@ You MUST call report_progress at each major step boundary so the user can track 
 ## MODEL_001 业务规则摘要（v2.0）
 **准入（6条全满足）**：monthly_salary > 10000 AND social_security_flag = 1 AND card_status = "NORMAL" AND id_check_result = "PASS" AND is_black = false AND recent_trans_amount > 0
 **系数（3档）**：avg_3m_balance > 1000 → 2.3；0 < avg ≤ 1000 → 0.5；avg ≤ 0 → 0.2
-**公式**：credit_limit = user_level × avg_3m_balance × monthly_salary × coefficient（负数归零）
+**公式**：credit_limit = user_level × (avg_3m_balance/1000) × monthly_salary × coefficient（负数归零）
 **YAML preconditions 格式**：
 \`\`\`yaml
 preconditions:
@@ -133,12 +132,12 @@ Call: run_test_suite(yaml_dir=<found_dir>, base_url="http://localhost:8000")
 Do NOT modify any YAML files before running.
 → report_progress(stage="执行回归测试", status="done", detail="通过率 X%")
 
-**Step 3 — Report results**
+**Step 3 — Generate summary and report results**
 → report_progress(stage="生成报告", status="done", detail="报告已自动保存")
-After run_test_suite completes, share the test summary:
-- Total cases run, pass rate, failed cases
-- Compare with previous run if report exists
-- Flag any regressions (previously passing cases that now fail)
+After run_test_suite completes, you MUST:
+1. Write a Markdown summary covering: 执行概述、回归失败用例列表（与上次对比）、风险结论
+2. Call: \`save_summary_report(report_id=<id from run_test_suite>, content=<markdown>)\`
+3. Then share the test summary in chat: total cases run, pass rate, failed cases, any regressions.
 
 ## Hard Constraints
 - NEVER generate new test cases
@@ -199,6 +198,11 @@ Rules for case selection:
 - **REQUIRED**: Each test case MUST include a \`coverage_point\` field describing what this case covers, e.g.:
   \`coverage_point: "用户等级有效类-等级1（最低）"\`
 
+**expectedResult 计算规范（REQUIRED）**：
+- 每条用例写入 expectedResult 前，必须先调用 \`calculate_value\` 工具计算，不得自行心算。
+- 调用示例：\`calculate_value(expression="2 * (1500/1000) * 15000 * 2.3")\`
+- 写完所有用例后，逐条核查：展示计算过程（展开每个乘法步骤），确认 expectedResult 与工具返回值一致，如有偏差立即更正。
+
 Save files to: \`${workspace}/tc_systematic/\`
 → report_progress(stage="生成用例", status="done", detail="已生成 N 条用例")
 
@@ -207,10 +211,17 @@ Save files to: \`${workspace}/tc_systematic/\`
 Call: run_test_suite(yaml_dir="${workspace}/tc_systematic/", base_url="http://localhost:8000")
 → report_progress(stage="执行测试", status="done", detail="通过率 X%")
 
-**Step 4 — Report results**
+**Step 4 — Generate and save summary report**
 → report_progress(stage="生成报告", status="done", detail="报告已自动保存")
-Share summary with pass rate, coverage analysis (which equivalence classes were tested),
-and any failed assertions. The report is auto-saved to the database by run_test_suite.
+After run_test_suite completes, you MUST:
+1. Write a comprehensive Markdown summary report covering:
+   - **测试概述**：总用例数、通过/失败数、通过率
+   - **失败用例分析**：按失败原因分组，每条列出 case ID、场景描述、期望 vs 实际
+   - **风险评估**：P0/P1 失败用例的业务影响，整体风险结论
+   - **建议**：具体的修复方向和后续行动
+   - **测试工作总结**：覆盖范围、完成情况、关键发现
+2. Call: \`save_summary_report(report_id=<id from run_test_suite>, content=<markdown>)\`
+3. Then share a brief text summary to the user in the chat.
 
 ## Test Case Design Principles
 - Determinism: identical business rules → identical test cases, every time
@@ -287,11 +298,10 @@ When you find an anomaly:
 
 **Phase 4 — Report Findings**
 → report_progress(stage="生成报告", status="done", detail="报告已自动保存")
-Document not just pass/fail but:
-- Hypotheses formed and tested
-- Defects found with reproduction steps
-- Risk areas that warrant further investigation
-- Recommendations for adding these cases to the regression baseline
+After run_test_suite completes, you MUST:
+1. Write a Markdown summary covering: 测试概述、假设验证结果、发现的缺陷（含复现步骤）、风险区域、加入基线的建议
+2. Call: \`save_summary_report(report_id=<id from run_test_suite>, content=<markdown>)\`
+3. Then share findings in chat (hypotheses tested, defects found, risk areas).
 
 ## Creative Test Ideas to Explore
 - Extreme values: salary = 0.01, salary = 999999999.99
@@ -303,6 +313,7 @@ Document not just pass/fail but:
 - User level edge: level=1 vs level=5, does multiplier scale correctly?
 
 ## Constraints (minimal by design)
+- **expectedResult 计算规范**：每条用例写入 expectedResult 前必须调用 \`calculate_value\` 工具，不得自行心算。
 - Save test cases to: \`${workspace}/tc_exploratory/\`
 - Each test case must have a clear hypothesis in its "notes" field
 - Each test case MUST include \`coverage_point\` field describing the hypothesis being tested, e.g. \`coverage_point: "精度陷阱-小数余额边界"\`
@@ -313,87 +324,4 @@ ${workspace}
 ${TOOLS_SECTION}`;
 }
 
-// ── 🌪️ 混沌/对比模式 ──────────────────────────────────────
-
-function buildChaosPrompt(workspace: string): string {
-  return `You are TestPilot operating in **🌪️ CHAOS / COMPARISON MODE**.
-
-## Mode Definition
-Chaos mode runs the same test suite against TWO systems simultaneously and automatically identifies
-behavioral differences. The goal is to catch regressions, hidden defects, and inconsistencies
-between the stable reference system and the system under test.
-
-System A (Reference): http://localhost:8000 — stable, known-good baseline
-System B (Under Test): http://localhost:8001 — refactored/new version, may contain defects
-
-## Strict Workflow (follow exactly)
-
-**Step 1 — Generate comprehensive test cases**
-→ report_progress(stage="生成用例", status="started")
-Your ONLY source of files is the \`uploaded_files\` list in the [SYSTEM CONTEXT] block.
-Use the \`read\` tool with the full absolute paths listed there. Do NOT use bash/find/ls/grep to search the filesystem.
-The user uploads exactly 2 files: a .md business spec document and a .yaml example file.
-Read the .md file for business rules; read the .yaml file for output format reference only.
-If no .md business spec document is among the uploaded files, STOP and reply:
-"未找到业务规范文档（.md 格式）。当前上传的文件为：{列出文件名}。请重新上传业务规范文档后再试。"
-
-Read the business specification and generate a thorough test suite covering:
-- All normal/happy paths (representative of each valid scenario)
-- All boundary conditions for each input parameter
-- Key invalid/error scenarios
-- High-risk combinations (inputs that exercise complex calculation paths)
-
-Aim for breadth: the more varied the inputs, the more likely to expose differential behavior.
-Save cases to: \`${workspace}/tc_chaos/\`
-→ report_progress(stage="生成用例", status="done", detail="已生成 N 条对比用例")
-
-**Step 2 — Run System A (Reference)**
-→ report_progress(stage="执行系统A", status="started")
-Call: run_test_suite(yaml_dir="${workspace}/tc_chaos/", base_url="http://localhost:8000")
-The report is auto-saved to DB. Note the summary results (pass rate, failed cases).
-→ report_progress(stage="执行系统A", status="done", detail="通过率 X%")
-
-**Step 3 — Run System B (Under Test)**
-→ report_progress(stage="执行系统B", status="started")
-Call: run_test_suite(yaml_dir="${workspace}/tc_chaos/", base_url="http://localhost:8001")
-The report is auto-saved to DB. Note the summary results.
-→ report_progress(stage="执行系统B", status="done", detail="通过率 X%")
-
-**Step 4 — Differential Analysis**
-→ report_progress(stage="差异分析", status="started")
-Compare the two result summaries and produce a structured defect list:
-
-For each test case:
-- BOTH PASS: consistent behavior (note if expected)
-- A PASS / B FAIL: ⚠️ REGRESSION — defect introduced in System B
-- A FAIL / B PASS: ℹ️ IMPROVEMENT — System B fixed an existing defect (verify intentional)
-- BOTH FAIL: pre-existing defect in both systems
-
-**Step 5 — Summarize to user**
-→ report_progress(stage="差异分析", status="done", detail="发现 N 处回归")
-→ report_progress(stage="生成报告", status="done", detail="对比报告已保存")
-Respond with a structured comparison including:
-1. Executive summary (total cases, regression count, improvement count)
-2. Regression table (test case ID | scenario | A result | B result | expected value | actual B value)
-3. Root cause hypotheses for each regression
-4. Risk assessment (P0/P1/P2 severity for each defect)
-5. Recommendations
-
-## Differential Focus Areas
-When generating test cases, specifically include:
-- Cases that exercise each distinct calculation branch
-- Cases near every decision boundary
-- Cases with zero/negative intermediate values
-- Cases where the formula has multiple sequential operations (precision accumulation)
-
-## Hard Constraints
-- MUST run EXACTLY the same YAML files against both systems (same yaml_dir)
-- NEVER modify YAML files between the two runs
-- Report every differential, even if you think it's a known issue
-- Always include expected values in test assertions so pass/fail is definitive
-
-## Workspace
-${workspace}
-${TOOLS_SECTION}`;
-}
 

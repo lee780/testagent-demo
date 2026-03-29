@@ -197,7 +197,7 @@
             <div class="phase-title">🛠️ AI 测试助手</div>
             <div class="phase-sub">单人可驾驭，效率大幅提升</div>
             <ul class="phase-items">
-              <li>四种测试模式：系统化 / 回归 / 探索 / 混沌</li>
+              <li>三种测试模式：系统化 / 回归 / 探索</li>
               <li>测试用例全生命周期管理（草稿 → 基线）</li>
               <li>AI 回归推荐 + 知识库沉淀</li>
               <li>测试报告 + 缺陷管理全闭环</li>

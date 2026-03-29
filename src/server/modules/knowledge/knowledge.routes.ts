@@ -30,7 +30,7 @@ const sceneUpdate = z.object({
 
 const specCreate = z.object({
   modelId: z.string().min(1),
-  mode: z.enum(['systematic', 'regression', 'exploratory', 'chaos']).optional(),
+  mode: z.enum(['systematic', 'regression', 'exploratory']).optional(),
   name: z.string().min(1),
   customInstructions: z.string().min(1),
   description: z.string().optional(),

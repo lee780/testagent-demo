@@ -304,6 +304,7 @@ model TestReport {
   testCasesData    Json?    @map("test_cases_data")
   executionResults Json?    @map("execution_results")
   recommendation   String?  @db.Text
+  summaryReport    String?  @db.Text @map("summary_report")
   casesImported    Boolean  @default(false) @map("cases_imported")
   uploadedDocs     String[] @default([]) @map("uploaded_docs")
   createdBy        String   @map("created_by")
