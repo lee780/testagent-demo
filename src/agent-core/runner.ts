@@ -234,8 +234,21 @@ async function runWithPiMono(
     }
   });
 
+  // Wire up abort signal → session.abort()
+  let abortListener: (() => void) | undefined;
+  if (params.signal) {
+    abortListener = () => { session.abort().catch(() => {}); };
+    params.signal.addEventListener('abort', abortListener);
+  }
+
   // Execute prompt
-  await session.prompt(params.query);
+  try {
+    await session.prompt(params.query);
+  } finally {
+    if (abortListener) {
+      params.signal!.removeEventListener('abort', abortListener);
+    }
+  }
 
   return {
     assistantText: assistantTexts.join(""),

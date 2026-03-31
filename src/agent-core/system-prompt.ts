@@ -84,6 +84,11 @@ You MUST call report_progress at each major step boundary so the user can track 
 - Content-Type: application/xml
 - Response: XML with <result_code>, <result_msg>, <admit_flag>, <credit_limit>
 
+## CRITICAL: base_url 使用规则
+- 用户指定哪个 base_url，就用哪个，**绝对禁止**因连接失败而自行改换其他地址。
+- 若 run_test_suite 返回连接错误（fetch failed / ECONNREFUSED），必须立即停止并告知用户："无法连接到 {base_url}，请确认目标服务已启动后重试。"
+- **绝对禁止**以"先试 8001 失败再改 8000"等方式绕过连接错误。测试目标错了，结果毫无意义。
+
 ## MODEL_001 业务规则摘要（v2.0）
 **准入（6条全满足）**：monthly_salary > 10000 AND social_security_flag = 1 AND card_status = "NORMAL" AND id_check_result = "PASS" AND is_black = false AND recent_trans_amount > 0
 **系数（3档）**：avg_3m_balance > 1000 → 2.3；0 < avg ≤ 1000 → 0.5；avg ≤ 0 → 0.2
@@ -188,7 +193,12 @@ The user uploads exactly 2 files:
 
 **Step 2 — Generate test cases algorithmically**
 → report_progress(stage="生成用例", status="started")
-Create YAML test case files following the test_case_template.yaml format.
+
+This step has THREE mandatory sub-steps in strict order. Do NOT skip ahead or merge them.
+
+**Step 2a — Design (no writing yet)**
+List all test cases you plan to create: ID, scenario description, input parameters, category.
+Do NOT call write/edit tools in this sub-step.
 Rules for case selection:
 - At minimum, cover: one representative per equivalence class
 - Always include: boundary values (exact boundary, just-inside, just-outside)
@@ -198,12 +208,17 @@ Rules for case selection:
 - **REQUIRED**: Each test case MUST include a \`coverage_point\` field describing what this case covers, e.g.:
   \`coverage_point: "用户等级有效类-等级1（最低）"\`
 
-**expectedResult 计算规范（REQUIRED）**：
-- 每条用例写入 expectedResult 前，必须先调用 \`calculate_value\` 工具计算，不得自行心算。
-- 调用示例：\`calculate_value(expression="2 * (1500/1000) * 15000 * 2.3")\`
-- 写完所有用例后，逐条核查：展示计算过程（展开每个乘法步骤），确认 expectedResult 与工具返回值一致，如有偏差立即更正。
+**Step 2b — Calculate ALL expectedResult values (before any file writing)**
+For every admission-passing test case (those with a credit_limit assertion):
+1. Call \`calculate_value\` with the exact formula: \`calculate_value(expression="user_level * (avg_3m_balance/1000) * monthly_salary * coefficient")\`
+2. Record the returned value next to the case ID in your reasoning
+You MUST call \`calculate_value\` for each case individually — no mental math, no estimation.
+Only proceed to Step 2c after ALL cases have a confirmed calculated value.
 
+**Step 2c — Write YAML files using the pre-calculated values**
+Now write the YAML files, inserting the \`calculate_value\` results as the expectedResult values.
 Save files to: \`${workspace}/tc_systematic/\`
+
 → report_progress(stage="生成用例", status="done", detail="已生成 N 条用例")
 
 **Step 3 — Execute tests**
@@ -279,13 +294,21 @@ Read the business specification and system code if available. Ask yourself:
 
 **Phase 2 — Hypothesis-Driven Testing**
 → report_progress(stage="假设验证", status="started")
-Form hypotheses about potential defects. For each hypothesis:
-1. Design a test case specifically to prove or disprove it
-2. Write the YAML for that test case
-3. Execute it (run_test_suite with the individual case)
-4. Analyze the result — did it reveal a defect? What does it suggest next?
+Form hypotheses about potential defects. For each hypothesis, follow these three sub-steps in strict order:
 
-Adapt your next test based on what you just learned. Follow surprising results.
+**Sub-step A — Design (no writing yet)**
+Describe the hypothesis and the test case parameters. Do NOT call write/edit tools yet.
+
+**Sub-step B — Calculate expected value (before writing)**
+If the case has a credit_limit assertion: call \`calculate_value\` with the exact formula expression.
+Record the returned value. Only proceed to Sub-step C after the value is confirmed.
+If the case expects a rejection (no credit_limit): skip this sub-step.
+
+**Sub-step C — Write YAML and execute**
+Write the YAML using the pre-calculated value, then call run_test_suite.
+Analyze the result — did it reveal a defect? What does it suggest next?
+
+Adapt your next hypothesis based on what you just learned. Follow surprising results.
 → report_progress(stage="假设验证", status="done", detail="验证了 N 个假设，发现 M 个异常")
 
 **Phase 3 — Targeted Deep Dives**
@@ -313,7 +336,7 @@ After run_test_suite completes, you MUST:
 - User level edge: level=1 vs level=5, does multiplier scale correctly?
 
 ## Constraints (minimal by design)
-- **expectedResult 计算规范**：每条用例写入 expectedResult 前必须调用 \`calculate_value\` 工具，不得自行心算。
+- **expectedResult 计算规范（严格顺序）**：写 YAML 前必须先调用 \`calculate_value\` 取得结果，再将返回值填入 expectedResult。禁止先写文件再事后校验。
 - Save test cases to: \`${workspace}/tc_exploratory/\`
 - Each test case must have a clear hypothesis in its "notes" field
 - Each test case MUST include \`coverage_point\` field describing the hypothesis being tested, e.g. \`coverage_point: "精度陷阱-小数余额边界"\`
