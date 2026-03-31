@@ -43,28 +43,28 @@ enum AgentSessionStatus {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  username      String    @unique
-  email         String?   @unique
-  passwordHash  String    @map("password_hash")
-  displayName   String?   @map("display_name")
-  role          UserRole  @default(USER)
-  status        UserStatus @default(ACTIVE)
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  lastLoginAt   DateTime? @map("last_login_at")
+  id           String     @id @default(uuid())
+  username     String     @unique
+  email        String?    @unique
+  passwordHash String     @map("password_hash")
+  displayName  String?    @map("display_name")
+  role         UserRole   @default(USER)
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  lastLoginAt  DateTime?  @map("last_login_at")
 
-  conversations     Conversation[]
-  tasks             Task[]
-  agentSessions     AgentSession[]
-  createdTestCases  TestCase[]   @relation("TestCaseCreator")
-  reviewedTestCases TestCase[]   @relation("TestCaseReviewer")
-  testReports       TestReport[]
-  createdDefects       Defect[]        @relation("DefectCreator")
+  conversations         Conversation[]
+  tasks                 Task[]
+  agentSessions         AgentSession[]
+  createdTestCases      TestCase[]      @relation("TestCaseCreator")
+  reviewedTestCases     TestCase[]      @relation("TestCaseReviewer")
+  testReports           TestReport[]
+  createdDefects        Defect[]        @relation("DefectCreator")
   createdDefectComments DefectComment[] @relation("DefectCommentCreator")
-  knowledgeDocs        KnowledgeDoc[]  @relation("KnowledgeDocCreator")
-  mockScenes           MockScene[]     @relation("MockSceneCreator")
-  testSpecs            TestSpec[]      @relation("TestSpecCreator")
+  knowledgeDocs         KnowledgeDoc[]  @relation("KnowledgeDocCreator")
+  mockScenes            MockScene[]     @relation("MockSceneCreator")
+  testSpecs             TestSpec[]      @relation("TestSpecCreator")
 
   @@map("users")
 }
@@ -76,11 +76,11 @@ model Conversation {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user     User      @relation(fields: [userId], references: [id])
-  messages Message[]
-  agentSessions AgentSession[]
+  user            User             @relation(fields: [userId], references: [id])
+  messages        Message[]
+  agentSessions   AgentSession[]
   coordinatorPlan CoordinatorPlan?
-  testReports TestReport[]
+  testReports     TestReport[]
 
   @@index([userId, updatedAt])
   @@index([createdAt])
@@ -91,7 +91,7 @@ model CoordinatorPlan {
   id              String   @id @default(uuid())
   conversationId  String   @unique @map("conversation_id")
   objective       String   @db.Text
-  plan            Json     // 完整的执行计划 (phases, workers, etc.)
+  plan            Json // 完整的执行计划 (phases, workers, etc.)
   activePhase     Int?     @map("active_phase")
   completedPhases Int[]    @default([]) @map("completed_phases")
   phaseOutputs    Json?    @map("phase_outputs")
@@ -304,7 +304,7 @@ model TestReport {
   testCasesData    Json?    @map("test_cases_data")
   executionResults Json?    @map("execution_results")
   recommendation   String?  @db.Text
-  summaryReport    String?  @db.Text @map("summary_report")
+  summaryReport    String?  @map("summary_report") @db.Text
   casesImported    Boolean  @default(false) @map("cases_imported")
   uploadedDocs     String[] @default([]) @map("uploaded_docs")
   createdBy        String   @map("created_by")
@@ -335,10 +335,10 @@ model Defect {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  report     TestReport?    @relation(fields: [reportId], references: [id])
-  testCase   TestCase?      @relation(fields: [testCaseId], references: [id])
-  creator    User           @relation("DefectCreator", fields: [createdBy], references: [id])
-  comments   DefectComment[]
+  report   TestReport?     @relation(fields: [reportId], references: [id])
+  testCase TestCase?       @relation(fields: [testCaseId], references: [id])
+  creator  User            @relation("DefectCreator", fields: [createdBy], references: [id])
+  comments DefectComment[]
 
   @@index([status])
   @@index([reportId])
@@ -402,9 +402,9 @@ model MockScene {
 model TestSpec {
   id                 String   @id @default(uuid())
   modelId            String   @map("model_id")
-  mode               String?  // null = 所有模式共享
+  mode               String? // null = 所有模式共享
   name               String
-  customInstructions String   @db.Text @map("custom_instructions")
+  customInstructions String   @map("custom_instructions") @db.Text
   description        String?
   isActive           Boolean  @default(true) @map("is_active")
   createdBy          String   @map("created_by")

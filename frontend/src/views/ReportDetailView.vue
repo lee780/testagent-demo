@@ -424,6 +424,7 @@ const editName = ref('')
 const editDocs = ref([])
 const newDoc = ref('')
 const activeTab = ref('results')
+const initialTabSet = ref(false)
 
 const showCaseDrawer = ref(false)
 const selectedCase = ref(null)
@@ -598,6 +599,10 @@ async function fetchReport() {
       report.value = data.data
       editName.value = data.data.name
       editDocs.value = [...(data.data.uploadedDocs || [])]
+      if (!initialTabSet.value) {
+        initialTabSet.value = true
+        activeTab.value = data.data.summaryReport ? 'summary' : 'results'
+      }
     }
   } catch { ElMessage.error('加载失败') }
   finally { loading.value = false }

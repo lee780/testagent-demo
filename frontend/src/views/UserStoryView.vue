@@ -1,184 +1,22 @@
 <template>
   <div class="story-page">
 
-    <!-- ── 导航锚点 ── -->
+    <!-- ── 标签导航 ── -->
     <nav class="story-nav">
-      <a href="#value" class="story-nav-link" @click.prevent="scrollTo('value')">领导价值</a>
-      <a href="#userstory" class="story-nav-link" @click.prevent="scrollTo('userstory')">用户故事</a>
-      <a href="#roadmap" class="story-nav-link" @click.prevent="scrollTo('roadmap')">下一步计划</a>
-      <a href="#arch" class="story-nav-link" @click.prevent="scrollTo('arch')">测试架构组网图</a>
+      <a class="story-nav-link" :class="{ active: activeTab === 'strategy-report' }" @click.prevent="switchTab('strategy-report')">战略汇报</a>
+      <a class="story-nav-link" :class="{ active: activeTab === 'project-report' }" @click.prevent="switchTab('project-report')">AI专项汇报</a>
+      <a class="story-nav-link" :class="{ active: activeTab === 'arch' }" @click.prevent="switchTab('arch')">测试架构组网图</a>
+      <a class="story-nav-link" :class="{ active: activeTab === 'modes' }" @click.prevent="switchTab('modes')">测试模式说明</a>
+      <a class="story-nav-link" :class="{ active: activeTab === 'roadmap' }" @click.prevent="switchTab('roadmap')">下一步计划</a>
     </nav>
 
-    <!-- ══════════════════════════════════════════
-         第一屏：领导视角 · 价值主张
-    ══════════════════════════════════════════ -->
-    <section id="value" class="section section-hero">
-      <div class="section-inner">
-        <div class="hero-badge">TestPilot 测试领航 · v2.5</div>
-        <h1 class="hero-title">让 1 个人做到<br><span class="highlight">原本需要整个测试团队</span>才能完成的事</h1>
-        <p class="hero-sub">AI 驱动的接口测试平台 · 从对话到知识库，全程智能驾驶</p>
-
-        <div class="value-cards">
-          <div class="value-card">
-            <div class="value-icon">⚡</div>
-            <div class="value-metric">分钟级</div>
-            <div class="value-label">覆盖全量边界场景的测试用例</div>
-            <div class="value-desc">从上传业务规范到产出完整测试报告，原本需要测试工程师耗费数天的工作，现在一段对话即可完成。</div>
-          </div>
-          <div class="value-card">
-            <div class="value-icon">🧠</div>
-            <div class="value-metric">越用越聪明</div>
-            <div class="value-label">知识持续沉淀，不依赖个人经验</div>
-            <div class="value-desc">每次测试结果写入知识库：业务规则、挡板场景、测试规范……团队经验不再藏在个人脑子里，离职不带走。</div>
-          </div>
-          <div class="value-card">
-            <div class="value-icon">🔍</div>
-            <div class="value-metric">全链路可追溯</div>
-            <div class="value-label">质量有据可查，汇报有理有据</div>
-            <div class="value-desc">从业务规范文档 → 测试对话 → 执行报告 → 入库用例 → 关联缺陷，每一步都有完整记录，随时可以向上汇报。</div>
-          </div>
-        </div>
-
-        <div class="comparison-bar">
-          <div class="compare-item old">
-            <div class="compare-label">传统方式</div>
-            <div class="compare-points">
-              <span>📄 手工阅读需求文档</span>
-              <span>✍️ 逐条编写测试用例</span>
-              <span>🖱️ 人工调用接口验证</span>
-              <span>💾 结果散落在个人电脑</span>
-              <span>🔁 换人重新来一遍</span>
-            </div>
-          </div>
-          <div class="compare-arrow">→</div>
-          <div class="compare-item new">
-            <div class="compare-label">TestPilot</div>
-            <div class="compare-points">
-              <span>💬 一段对话描述测试需求</span>
-              <span>🤖 AI 自动生成 + 执行 + 报告</span>
-              <span>📚 结果自动写入团队知识库</span>
-              <span>🎯 AI 推荐下次回归的用例</span>
-              <span>♾️ 每次测试让系统更聪明</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
+    <!-- ── 标签内容容器 ── -->
+    <div class="tab-content">
 
     <!-- ══════════════════════════════════════════
-         第二屏：用户故事（连贯工作流）
+         下一步计划
     ══════════════════════════════════════════ -->
-    <section id="userstory" class="section section-userstory">
-      <div class="section-inner">
-        <h2 class="section-title">用户故事</h2>
-        <p class="section-sub">从接到一个新接口，到建立可持续运转的质量体系——一个测试工程师的完整旅程</p>
-
-        <div class="journey">
-
-          <div class="journey-step">
-            <div class="journey-step-header">
-              <div class="journey-badge">场景一</div>
-              <div class="journey-title">我有一个新接口，想快速出一套测试用例</div>
-            </div>
-            <div class="journey-body">
-              <div class="journey-steps">
-                <div class="jstep"><span class="jstep-dot"></span><span>把业务规范文档上传到「知识库 → 业务规则库」，绑定接口模型编号</span></div>
-                <div class="jstep"><span class="jstep-dot"></span><span>打开聊天，选「系统化」模式，输入一句话：<em>"请对授信额度接口做全量系统化测试"</em></span></div>
-                <div class="jstep"><span class="jstep-dot"></span><span>Agent 自动读取业务规则、运用边界值分析生成用例、调接口执行、产出 HTML 报告，全程实时可见</span></div>
-                <div class="jstep"><span class="jstep-dot"></span><span>进报告详情页，看完结果，点「用例入库」——用例以草稿状态写入用例库，等待审核</span></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="journey-connector">
-            <div class="journey-connector-line"></div>
-            <div class="journey-connector-label">用例进入审核流程</div>
-          </div>
-
-          <div class="journey-step">
-            <div class="journey-step-header">
-              <div class="journey-badge">场景二</div>
-              <div class="journey-title">用例写完了，怎么过审、固化为基线</div>
-            </div>
-            <div class="journey-body">
-              <div class="journey-steps">
-                <div class="jstep"><span class="jstep-dot"></span><span>在用例库找到草稿用例，点「提交审核」</span></div>
-                <div class="jstep"><span class="jstep-dot"></span><span>审核人逐条查看，批准则变「已审批」，不合格打回并附意见，修改后重新提交</span></div>
-                <div class="jstep"><span class="jstep-dot"></span><span>审批通过后，技术负责人点「晋级基线」，这条用例正式锁定</span></div>
-                <div class="jstep"><span class="jstep-dot"></span><span>基线用例不能直接修改——后续要改，必须新建版本，老版本完整保留，历史可追溯</span></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="journey-connector">
-            <div class="journey-connector-line"></div>
-            <div class="journey-connector-label">几周后，接口规则有变更</div>
-          </div>
-
-          <div class="journey-step">
-            <div class="journey-step-header">
-              <div class="journey-badge">场景三</div>
-              <div class="journey-title">接口规则改了，我该跑哪些用例</div>
-            </div>
-            <div class="journey-body">
-              <div class="journey-steps">
-                <div class="jstep"><span class="jstep-dot"></span><span>进用例库，点「AI 回归推荐」，输入这次改动描述：<em>"月收入判断阈值从 10000 调整为 12000"</em></span></div>
-                <div class="jstep"><span class="jstep-dot"></span><span>大模型结合用例的覆盖点、历史报告、来源对话语义推理，按相关度排序，每条附推荐理由</span></div>
-                <div class="jstep"><span class="jstep-dot"></span><span>勾选相关用例，切换「回归」模式发起测试，出回归验证报告</span></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="journey-connector">
-            <div class="journey-connector-line"></div>
-            <div class="journey-connector-label">回归发现失败用例</div>
-          </div>
-
-          <div class="journey-step">
-            <div class="journey-step-header">
-              <div class="journey-badge">场景四</div>
-              <div class="journey-title">测试发现 Bug，怎么记录和追溯</div>
-            </div>
-            <div class="journey-body">
-              <div class="journey-steps">
-                <div class="jstep"><span class="jstep-dot"></span><span>在报告里找到失败用例，点「创建缺陷」——执行日志自动带入，无需手填</span></div>
-                <div class="jstep"><span class="jstep-dot"></span><span>缺陷详情可以一路向上追：缺陷 → 执行用例 → 测试报告 → 当时的对话 → 上传的业务文档</span></div>
-                <div class="jstep"><span class="jstep-dot"></span><span>缺陷按状态流转：待处理 → 处理中 → 已解决，评论区随时跟进进展</span></div>
-              </div>
-              <div class="journey-result">整个流程走完，从接口接入到发现 Bug 全程有迹可查，下一轮迭代直接复用基线用例库</div>
-            </div>
-          </div>
-
-          <div class="journey-connector">
-            <div class="journey-connector-line"></div>
-            <div class="journey-connector-label">其他常用场景</div>
-          </div>
-
-          <div class="journey-extras">
-            <div class="extra-card">
-              <div class="extra-header">
-                <div class="journey-badge">探索模式</div>
-                <div class="journey-title">怀疑接口有隐藏 Bug，想主动挖掘</div>
-              </div>
-              <div class="extra-desc">选「探索」模式，告诉 AI 怀疑方向（如 <em>"重点探查浮点数精度边界"</em>），Agent 以假设驱动方式自由设计非常规测试组合，主动寻找系统弱点，找到问题直接创建缺陷关联执行日志。</div>
-            </div>
-            <div class="extra-card">
-              <div class="extra-header">
-                <div class="journey-badge">知识库</div>
-                <div class="journey-title">团队要统一测试标准，不想每次重复说明</div>
-              </div>
-              <div class="extra-desc">在「知识库」预置业务规范文档、测试规范（如"expected 必须给出精确数值"）和外部挡板场景（如"黑名单用户"）。之后任何人发起对话只需填写模型 ID，以上内容自动注入，经验固化为系统资产。</div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-    <!-- ══════════════════════════════════════════
-         第三屏：下一步战略计划
-    ══════════════════════════════════════════ -->
-    <section id="roadmap" class="section section-roadmap">
+    <section v-show="activeTab === 'roadmap'" id="roadmap" class="section section-roadmap">
       <div class="section-inner">
         <h2 class="section-title">下一步计划</h2>
         <p class="section-sub">从 AI 测试助手，到研发体系的质量护城河</p>
@@ -197,7 +35,7 @@
             <div class="phase-title">🛠️ AI 测试助手</div>
             <div class="phase-sub">单人可驾驭，效率大幅提升</div>
             <ul class="phase-items">
-              <li>三种测试模式：系统化 / 回归 / 探索</li>
+              <li>两种测试模式：系统化 / 探索</li>
               <li>测试用例全生命周期管理（草稿 → 基线）</li>
               <li>AI 回归推荐 + 知识库沉淀</li>
               <li>测试报告 + 缺陷管理全闭环</li>
@@ -264,7 +102,7 @@
     <!-- ══════════════════════════════════════════
          第四屏：测试架构组网图
     ══════════════════════════════════════════ -->
-    <section id="arch" class="section section-arch">
+    <section v-show="activeTab === 'arch'" id="arch" class="section section-arch">
       <div class="section-inner section-inner-wide">
         <h2 class="section-title">08 — 测试架构组网图</h2>
         <p class="section-sub">TestPilot 测试平台 · 授信C系统 · 挡板 · 各自数据库 · 真实外部渠道的部署位置、网络关系与调用流向</p>
@@ -304,18 +142,7 @@
         </div>
 
         <div class="arch-block">
-          <h3 class="arch-h3">3. 两类场景触发路径</h3>
-          <div class="mermaid-wrap" ref="el3"></div>
-        </div>
-
-        <div class="arch-block">
-          <h3 class="arch-h3">4. 真实环境 vs 测试环境对比</h3>
-          <div class="mermaid-wrap" ref="el4"></div>
-          <p class="arch-note">切换点：授信C系统配置文件中 <code>STUB_SERVER_URL</code> 指向挡板地址，<strong>授信C系统代码零修改</strong>。</p>
-        </div>
-
-        <div class="arch-block">
-          <h3 class="arch-h3">5. 部署位置一览</h3>
+          <h3 class="arch-h3">3. 部署位置一览</h3>
           <table class="arch-table">
             <thead><tr><th>组件</th><th>所属系统</th><th>网络位置</th><th>端口</th></tr></thead>
             <tbody>
@@ -337,11 +164,656 @@
       </div>
     </section>
 
+    <!-- ══════════════════════════════════════════
+         测试模式说明
+    ══════════════════════════════════════════ -->
+    <section v-show="activeTab === 'modes'" id="modes" class="section section-modes">
+      <div class="section-inner">
+        <h2 class="section-title">测试模式说明</h2>
+        <p class="section-sub">TestPilot 支持两种测试模式，适用于不同阶段和目标</p>
+
+        <!-- 对比表 -->
+        <div class="modes-compare">
+          <table class="arch-table modes-table">
+            <thead>
+              <tr>
+                <th>维度</th>
+                <th>📐 系统化模式</th>
+                <th>🔭 探索模式</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>核心目标</td>
+                <td>完整覆盖已知业务规则</td>
+                <td>发现常规测试遗漏的隐藏缺陷</td>
+              </tr>
+              <tr>
+                <td>用例来源</td>
+                <td>BVA 边界值 + 等价类算法驱动，确定性生成</td>
+                <td>LLM 假设驱动，自由设计非常规组合</td>
+              </tr>
+              <tr>
+                <td>适用测试阶段</td>
+                <td>SIT 首次建库、版本迭代前的基线覆盖</td>
+                <td>任意阶段，重点针对可疑薄弱区域</td>
+              </tr>
+              <tr>
+                <td>结果可重复性</td>
+                <td>高——相同规则文档产出相同用例</td>
+                <td>低——每次 LLM 自由探索，结果各异</td>
+              </tr>
+              <tr>
+                <td>典型使用者</td>
+                <td>建立用例库的测试工程师</td>
+                <td>深度挖掘缺陷的资深测试 / QA</td>
+              </tr>
+              <tr>
+                <td>产出形态</td>
+                <td>标准化 YAML 用例，可入库、可复用</td>
+                <td>探索性 YAML 用例，侧重记录发现思路</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 详细卡片 -->
+        <div class="modes-cards">
+          <div class="mode-detail-card systematic-card">
+            <div class="mode-detail-header">
+              <span class="mode-detail-icon">📐</span>
+              <div>
+                <div class="mode-detail-title">系统化模式</div>
+                <div class="mode-detail-sub">算法驱动 · 全量覆盖 · 可重复</div>
+              </div>
+            </div>
+
+            <div class="mode-detail-section">
+              <div class="mode-detail-label">应用场景</div>
+              <ul class="mode-detail-list">
+                <li>接口上线前，首次建立完整测试基线用例库</li>
+                <li>业务规则文档变更后，重新生成覆盖新规则的用例</li>
+                <li>SIT 验收阶段，需要向上汇报测试覆盖度</li>
+              </ul>
+            </div>
+
+            <div class="mode-detail-section">
+              <div class="mode-detail-label">测试阶段</div>
+              <p class="mode-detail-text">SIT（系统集成测试）阶段最常用。首次运行产出标准用例库，后续每轮迭代可直接复用基线用例做回归验证。</p>
+            </div>
+
+            <div class="mode-detail-section">
+              <div class="mode-detail-label">内部工具调用顺序</div>
+              <div class="tool-call-flow">
+                <div class="tool-call-step">
+                  <span class="tool-call-num">1</span>
+                  <div><strong>report_progress</strong> — 通知用户"分析文档"阶段开始</div>
+                </div>
+                <div class="tool-call-step">
+                  <span class="tool-call-num">2</span>
+                  <div><strong>read</strong> — 读取用户上传的业务规则文档，提取规则条目</div>
+                </div>
+                <div class="tool-call-step">
+                  <span class="tool-call-num">3</span>
+                  <div><strong>calculate_value</strong> — 对每条边界值/等价类预期结果进行精确数学计算，避免手工填错</div>
+                </div>
+                <div class="tool-call-step">
+                  <span class="tool-call-num">4</span>
+                  <div><strong>write</strong> — 将用例写入标准 YAML 文件（保存至 tc_systematic/ 目录）</div>
+                </div>
+                <div class="tool-call-step">
+                  <span class="tool-call-num">5</span>
+                  <div><strong>run_test_suite</strong> — 读取全部 YAML，自动写入前置数据、发起请求、断言结果、保存报告</div>
+                </div>
+                <div class="tool-call-step">
+                  <span class="tool-call-num">6</span>
+                  <div><strong>save_summary_report</strong> — 将执行摘要写入报告的「测试汇报」Tab</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mode-detail-section">
+              <div class="mode-detail-label">具体示例</div>
+              <div class="mode-example">
+                <div class="example-input">
+                  <span class="example-tag">用户输入</span>
+                  <em>"请对授信额度接口 MODEL001 做全量系统化测试，重点覆盖月收入边界和系数档位"</em>
+                </div>
+                <div class="example-steps">
+                  <div>Agent 读取知识库中 MODEL001 的业务规则文档，识别出 3 个准入条件边界、3 个系数档位</div>
+                  <div>调用 calculate_value 计算 6 个边界值用例的精确 credit_limit（如 2×(1500/1000)×15000×2.3 = 103500.00）</div>
+                  <div>生成 24 条 YAML 用例，覆盖所有分支组合</div>
+                  <div>run_test_suite 自动执行，全部通过 → 报告保存，通过率 100%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mode-detail-card exploratory-card">
+            <div class="mode-detail-header">
+              <span class="mode-detail-icon">🔭</span>
+              <div>
+                <div class="mode-detail-title">探索模式</div>
+                <div class="mode-detail-sub">假设驱动 · 自由探索 · 挖掘隐藏 Bug</div>
+              </div>
+            </div>
+
+            <div class="mode-detail-section">
+              <div class="mode-detail-label">应用场景</div>
+              <ul class="mode-detail-list">
+                <li>怀疑某个功能区域存在隐藏缺陷，想主动挖掘</li>
+                <li>多个业务规则交叉叠加时，系统化模式难以穷举的组合场景</li>
+                <li>上线前的高风险区域深度探查（浮点精度、极端边界、并发副作用等）</li>
+              </ul>
+            </div>
+
+            <div class="mode-detail-section">
+              <div class="mode-detail-label">测试阶段</div>
+              <p class="mode-detail-text">任意阶段均可使用。系统化用例跑完后，切换探索模式针对可疑点深挖，是最常见的组合用法。也适合在 UAT 前对关键业务路径做最后一轮安全网测试。</p>
+            </div>
+
+            <div class="mode-detail-section">
+              <div class="mode-detail-label">内部工具调用顺序</div>
+              <div class="tool-call-flow">
+                <div class="tool-call-step">
+                  <span class="tool-call-num">1</span>
+                  <div><strong>report_progress</strong> — 通知用户"分析假设方向"阶段开始</div>
+                </div>
+                <div class="tool-call-step">
+                  <span class="tool-call-num">2</span>
+                  <div><strong>read</strong>（可选）— 读取已有系统化报告，了解哪些场景已覆盖，聚焦空白区</div>
+                </div>
+                <div class="tool-call-step">
+                  <span class="tool-call-num">3</span>
+                  <div><strong>calculate_value</strong> — 对每个探索性假设的预期结果进行精确计算</div>
+                </div>
+                <div class="tool-call-step">
+                  <span class="tool-call-num">4</span>
+                  <div><strong>write</strong> — 将探索用例写入 YAML（保存至 tc_exploratory/ 目录），每条用例含 hypothesis 字段说明探索意图</div>
+                </div>
+                <div class="tool-call-step">
+                  <span class="tool-call-num">5</span>
+                  <div><strong>run_test_suite</strong> — 执行探索用例，对失败用例自动记录至报告</div>
+                </div>
+                <div class="tool-call-step">
+                  <span class="tool-call-num">6</span>
+                  <div><strong>save_summary_report</strong> — 汇总探索发现，归纳缺陷规律</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mode-detail-section">
+              <div class="mode-detail-label">具体示例</div>
+              <div class="mode-example">
+                <div class="example-input">
+                  <span class="example-tag">用户输入</span>
+                  <em>"重点探查授信额度接口在浮点数余额边界附近的精度问题，怀疑有四舍五入缺陷"</em>
+                </div>
+                <div class="example-steps">
+                  <div>Agent 理解假设方向：浮点精度 → 设计 avg_3m_balance 在 999.999、1000.001、1000.005 等边界值附近的测试组合</div>
+                  <div>调用 calculate_value 精确计算预期 credit_limit（避免测试本身计算错误掩盖真实 Bug）</div>
+                  <div>生成 8 条非常规探索用例，覆盖四舍五入临界点</div>
+                  <div>执行发现：avg_3m_balance=999.995 时系统返回错误系数档位 → 确认缺陷，创建 Defect 记录</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         AI专项汇报
+    ══════════════════════════════════════════ -->
+    <section v-show="activeTab === 'project-report'" id="project-report" class="section section-project-report">
+      <div class="section-inner">
+        <h2 class="section-title">AI 测试专项落地汇报</h2>
+        <p class="section-sub">专项：准入系统 AI 接口测试专项 · 填报时间：2026-03-25 · 负责团队：测试质量保障组</p>
+
+        <!-- 价值主张（来自领导价值页） -->
+        <div class="value-intro-block">
+          <div class="hero-badge" style="margin-bottom:16px">TestPilot 测试领航 · v2.5</div>
+          <h3 class="report-h3" style="margin-bottom:12px">让 1 个人做到原本需要整个测试团队才能完成的事</h3>
+          <div class="value-cards">
+            <div class="value-card">
+              <div class="value-icon">⚡</div>
+              <div class="value-metric">分钟级</div>
+              <div class="value-label">覆盖全量边界场景的测试用例</div>
+              <div class="value-desc">从上传业务规范到产出完整测试报告，原本需要测试工程师耗费数天的工作，现在一段对话即可完成。</div>
+            </div>
+            <div class="value-card">
+              <div class="value-icon">🧠</div>
+              <div class="value-metric">越用越聪明</div>
+              <div class="value-label">知识持续沉淀，不依赖个人经验</div>
+              <div class="value-desc">每次测试结果写入知识库：业务规则、挡板场景、测试规范……团队经验不再藏在个人脑子里，离职不带走。</div>
+            </div>
+            <div class="value-card">
+              <div class="value-icon">🔍</div>
+              <div class="value-metric">全链路可追溯</div>
+              <div class="value-label">质量有据可查，汇报有理有据</div>
+              <div class="value-desc">从业务规范文档 → 测试对话 → 执行报告 → 入库用例 → 关联缺陷，每一步都有完整记录，随时可以向上汇报。</div>
+            </div>
+          </div>
+          <div class="data-charts" style="margin-top:20px">
+            <div class="chart-card">
+              <div class="chart-title">单轮测试耗时对比</div>
+              <div class="bar-chart">
+                <div class="bar-row">
+                  <div class="bar-label">传统方式</div>
+                  <div class="bar-track"><div class="bar-fill bar-old" style="width:100%"><span class="bar-val">12 人天</span></div></div>
+                </div>
+                <div class="bar-row">
+                  <div class="bar-label">TestPilot</div>
+                  <div class="bar-track"><div class="bar-fill bar-new" style="width:0.7%"><span class="bar-val bar-val-new">1 小时</span></div></div>
+                </div>
+              </div>
+              <div class="chart-note">效率提升 <strong>99%+</strong></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">用例覆盖量对比</div>
+              <div class="bar-chart">
+                <div class="bar-row">
+                  <div class="bar-label">传统方式</div>
+                  <div class="bar-track"><div class="bar-fill bar-old" style="width:25%"><span class="bar-val">~50 条</span></div></div>
+                </div>
+                <div class="bar-row">
+                  <div class="bar-label">TestPilot</div>
+                  <div class="bar-track"><div class="bar-fill bar-new" style="width:100%"><span class="bar-val">200+ 条</span></div></div>
+                </div>
+              </div>
+              <div class="chart-note">覆盖量提升 <strong>3 倍+</strong></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">人力释放比例</div>
+              <div class="donut-wrap">
+                <svg viewBox="0 0 100 100" class="donut-svg">
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="var(--border-color,#e8e8e8)" stroke-width="16"/>
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#5b9bd5" stroke-width="16"
+                    stroke-dasharray="239 0" stroke-dashoffset="60" stroke-linecap="round"/>
+                  <circle cx="50" cy="50" r="38" fill="none" stroke="#e74c3c" stroke-width="16"
+                    stroke-dasharray="24 215" stroke-dashoffset="-179" stroke-linecap="round"/>
+                </svg>
+                <div class="donut-center"><span class="donut-pct">90%</span><span class="donut-sub">释放</span></div>
+              </div>
+              <div class="donut-legend">
+                <span class="legend-dot" style="background:#5b9bd5"></span>AI 接管 90%
+                <span class="legend-dot" style="background:#e74c3c;margin-left:12px"></span>人工保留 10%
+              </div>
+            </div>
+          </div>
+          <div class="comparison-bar" style="margin-top:20px">
+            <div class="compare-item old">
+              <div class="compare-label">传统方式</div>
+              <div class="compare-points">
+                <span>📄 手工阅读需求文档</span>
+                <span>✍️ 逐条编写测试用例</span>
+                <span>🖱️ 人工调用接口验证</span>
+                <span>💾 结果散落在个人电脑</span>
+                <span>🔁 换人重新来一遍</span>
+              </div>
+            </div>
+            <div class="compare-arrow">→</div>
+            <div class="compare-item new">
+              <div class="compare-label">TestPilot</div>
+              <div class="compare-points">
+                <span>💬 一段对话描述测试需求</span>
+                <span>🤖 AI 自动生成 + 执行 + 报告</span>
+                <span>📚 结果自动写入团队知识库</span>
+                <span>🎯 AI 推荐下次回归的用例</span>
+                <span>♾️ 每次测试让系统更聪明</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="report-block">
+          <h3 class="report-h3">场景命题</h3>
+          <p class="report-p">准入系统规则复杂、分支多，SIT 阶段每次手工梳理场景、逐条执行用例至少半天，规则组合多、容易漏测，版本迭代越快压力越大。</p>
+          <p class="report-p">本专项聚焦<strong>接口级动态测试验证</strong>，区别于静态代码扫描，也不是端到端业务流测试——核心是针对准入各接口，由 AI 自动构造请求、实际调用、验证返回结果是否符合规则预期，在 SIT 阶段快速发现接口逻辑与规则不符的问题，让测试团队把精力集中在更高层次的业务验证上。</p>
+        </div>
+
+        <div class="report-block">
+          <h3 class="report-h3">场景归属</h3>
+          <p class="report-p">测试能力价值提升。隶属测试质量保障线，嵌入准入系统项目测试组，3 名测试工程师兼职推进，不新增编制。</p>
+        </div>
+
+        <div class="report-block">
+          <h3 class="report-h3">实施步骤及时间点</h3>
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="timeline-tag">第一阶段 04/01–04/30</div>
+              <div class="timeline-title">把工具跑起来</div>
+              <ul class="report-list">
+                <li>协调开发搭建准入系统专用测试环境，去掉安全加密限制，让工具能直接调用接口</li>
+                <li>打通测试机器与准入系统、数据库之间的网络连接</li>
+                <li>协调开发明确外部交易请求的地址配置方式</li>
+                <li>开发模拟外部系统响应的挡板服务，避免真实外部依赖干扰测试结果</li>
+                <li>在云端完成 TestAgent 平台和挡板服务的部署上线</li>
+              </ul>
+              <div class="timeline-delivery">阶段交付：测试环境就绪，TestAgent 可正常调用准入系统接口</div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-tag">第二阶段 05/01–05/31</div>
+              <div class="timeline-title">跑通试点，把工具调准</div>
+              <p class="report-p">挑几笔典型业务作为试点，整理对应的业务规则文档；人工同步写一套对照测试案例；让 TestAgent 跑同一批场景，把 AI 结果和人工结果逐一对比，找出差距针对性调优，顺带把准入系统的规则知识库搭起来。</p>
+              <div class="timeline-delivery">阶段交付：试点验证报告（AI vs 人工对比）+ 工具调优完成 + 规则知识库初版</div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-tag">第三阶段 06/01–06/30</div>
+              <div class="timeline-title">正式参与 SIT 验收 <span class="timeline-note">（准入系统本月底投产）</span></div>
+              <p class="report-p">工具调准后正式接入准入系统投产前的 SIT 验收，AI 替代人工完成接口场景验证并出具测试报告，针对发现的问题复盘改进，确保投产质量。</p>
+              <div class="timeline-delivery">阶段交付：首份正式 AI SIT 验收测试报告 + 问题复盘记录</div>
+            </div>
+            <div class="timeline-item">
+              <div class="timeline-tag">第四阶段 07/01–07/31</div>
+              <div class="timeline-title">稳定运行，总结收尾</div>
+              <p class="report-p">准入系统投产后，持续用 TestAgent 跟进迭代版本的验收测试，记录实际提效数据；同步整理全程积累的规则知识库和测试模板，输出一份可供其他模块参考的样板总结报告。</p>
+              <div class="timeline-delivery">阶段交付：多轮版本验收报告 + 实际提效数据 + 样板间总结报告</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="report-block">
+          <h3 class="report-h3">核心目标</h3>
+          <ol class="report-list report-list-ordered">
+            <li>将 TestAgent 工具落地准入系统 SIT 流程，实现 AI 辅助验收测试常态化运行</li>
+            <li>大幅压缩每轮 SIT 验收测试耗时，降低高频迭代下的漏测风险，释放测试人力</li>
+            <li>沉淀准入系统专属测试知识资产，解决经验依赖个人、随人员变动流失的问题</li>
+          </ol>
+        </div>
+
+        <div class="report-block">
+          <h3 class="report-h3">量化目标</h3>
+          <p class="report-p">以下为针对<strong>单份业务规则文档</strong>（含对应接口测试场景），在 SIT 验收测试环节中，人工 vs AI 模式的全流程耗时对比：</p>
+          <table class="arch-table" style="margin: 16px 0; width: 100%">
+            <thead>
+              <tr><th>环节</th><th>当前人工耗时</th><th>AI 模式耗时</th><th>提效幅度</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>业务场景设计</td><td>1 人天</td><td>约 5 分钟</td><td>99%+</td></tr>
+              <tr><td>自动化脚本编写（一次性）</td><td>5 人天</td><td>接近于零</td><td>—</td></tr>
+              <tr><td>脚本持久化改造（可复用）</td><td>5 人天</td><td>20 分钟以内</td><td>99%+</td></tr>
+              <tr><td>测试执行 + 报告出具</td><td>1 人天</td><td>20 分钟以内</td><td>99%+</td></tr>
+              <tr style="font-weight:700;background:rgba(91,155,213,0.08)"><td>全流程合计</td><td>约 12 人天</td><td>1 小时以内</td><td>99%+</td></tr>
+              <tr><td>用例覆盖量</td><td>约 50 条</td><td>200 条以上</td><td>覆盖量提升 3 倍+</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="report-block">
+          <h3 class="report-h3">资源需求</h3>
+          <ul class="report-list">
+            <li><strong>大模型 API</strong>：接入通义千问（QWEN3.5+480B 及以上）</li>
+            <li><strong>测试环境</strong>：需准入系统独立自动化测试环境 + 接口及 Mock 权限</li>
+          </ul>
+        </div>
+
+        <div class="report-block">
+          <h3 class="report-h3">落地潜在风险</h3>
+          <table class="arch-table" style="width: 100%">
+            <thead><tr><th>风险</th><th>应对措施</th></tr></thead>
+            <tbody>
+              <tr><td>准入规则复杂，AI 理解不准确</td><td>初期设人工评审卡点，发现偏差及时补充规则知识库，逐步提升准确率</td></tr>
+              <tr><td>上游业务规则文档不完整或不准确，影响工具有效性</td><td>明确规则文档输入标准，在第 1 个月对接阶段与业务方确认文档质量，以文档质量作为推进前提</td></tr>
+              <tr><td>需要独立自动化测试环境，环境建设存在不确定性</td><td>第 1 个月首要任务打通环境，环境未就绪则不推进后续步骤，提前纳入项目整体排期跟进</td></tr>
+              <tr><td>前期工具适配、版本联调阶段需要开发人员重点配合</td><td>提前与开发团队对齐配合计划，明确关键节点所需支持事项，纳入迭代排期</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="report-block">
+          <h3 class="report-h3">预期成效</h3>
+          <div class="outcome-cards">
+            <div class="outcome-card">
+              <div class="outcome-tag">短期（5 个月内）</div>
+              <p>准入系统 AI 辅助验收测试样板落地，在 SIT 验收环节中，针对单份业务规则文档的测试工作从约 12 人天压缩到 1 小时以内；用例覆盖量从约 5 条提升至约 30 条；测试经验沉淀在平台，不随人员变动流失。</p>
+            </div>
+            <div class="outcome-card">
+              <div class="outcome-tag">中期（项目结束后）</div>
+              <p>准入模块 AI 测试流程成熟稳定，形成可直接复用的方法论与知识库模板，为后续其他模块推广 AI 测试打下基础。</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         战略汇报
+    ══════════════════════════════════════════ -->
+    <section v-show="activeTab === 'strategy-report'" id="strategy-report" class="section section-strategy-report">
+      <div class="section-inner">
+        <h2 class="section-title">AI 测试工具项目汇报</h2>
+        <p class="section-sub">汇报日期：2026 年 3 月 30 日</p>
+
+        <div class="strategy-block highlight-block">
+          <h3 class="strategy-h3">一、这件事对深圳公司意味着什么</h3>
+          <p class="report-p">这不是一个测试工具项目，这是一个<strong>让深圳公司在集团内率先建立 AI 工程化优势的机会</strong>。</p>
+          <p class="report-p">当前，各兄弟公司（北京、上海、广州等）仍依赖传统人工测试方式——效率低、覆盖浅、经验随人员流动而流失。没有一家公司在这个方向上形成成熟的落地实践。</p>
+          <div class="highlight-quote">谁先跑通，谁就掌握了话语权。</div>
+          <p class="report-p">深圳公司如果在未来 4 个月内完成 TestAgent 的规模化落地，将在集团层面形成清晰的领先优势：</p>
+          <ul class="report-list">
+            <li>深圳公司成为集团 <strong>AI 应用 No.1</strong>，可复制的方法论由我们输出</li>
+            <li>在 AI 战略落地上拥有<strong>可量化的业绩成果</strong>，向上汇报有底气、有数据</li>
+            <li>相较于各兄弟公司，<strong>深圳公司的交付质量和效率大幅领先</strong>，差距不是一点点</li>
+          </ul>
+        </div>
+
+        <div class="strategy-block">
+          <h3 class="strategy-h3">二、工具本身不重要，重要的是它能带来什么</h3>
+          <p class="report-p">TestAgent 是一套 AI 驱动的自动化测试工具，但我们不谈技术——<strong>我们只谈结果</strong>：</p>
+
+          <!-- 视觉对比图 -->
+          <div class="vs-chart-wrap">
+            <div class="vs-metric">
+              <div class="vs-label">单轮测试耗时</div>
+              <div class="vs-bars">
+                <div class="vs-bar-group">
+                  <div class="vs-bar-track"><div class="vs-bar-fill vs-old" style="width:100%"></div></div>
+                  <div class="vs-bar-text vs-old-text">兄弟公司 · <strong>12 人天</strong></div>
+                </div>
+                <div class="vs-bar-group">
+                  <div class="vs-bar-track"><div class="vs-bar-fill vs-new" style="width:1%"></div></div>
+                  <div class="vs-bar-text vs-new-text">深圳公司 · <strong>1 小时</strong></div>
+                </div>
+              </div>
+              <div class="vs-badge">快 <span>100倍</span></div>
+            </div>
+            <div class="vs-divider"></div>
+            <div class="vs-metric">
+              <div class="vs-label">用例覆盖量</div>
+              <div class="vs-bars">
+                <div class="vs-bar-group">
+                  <div class="vs-bar-track"><div class="vs-bar-fill vs-old" style="width:17%"></div></div>
+                  <div class="vs-bar-text vs-old-text">兄弟公司 · <strong>~50 条</strong></div>
+                </div>
+                <div class="vs-bar-group">
+                  <div class="vs-bar-track"><div class="vs-bar-fill vs-new" style="width:100%"></div></div>
+                  <div class="vs-bar-text vs-new-text">深圳公司 · <strong>200+ 条</strong></div>
+                </div>
+              </div>
+              <div class="vs-badge vs-badge-green">多 <span>3倍+</span></div>
+            </div>
+          </div>
+
+          <table class="arch-table" style="width: 100%; margin: 16px 0">
+            <thead><tr><th>维度</th><th>兄弟公司（传统方式）</th><th>深圳公司（TestAgent）</th></tr></thead>
+            <tbody>
+              <tr><td>单轮测试耗时</td><td>约 <strong>12 人天</strong></td><td><strong>1 小时以内</strong></td></tr>
+              <tr><td>用例覆盖量</td><td>约 50 条，人工编写</td><td>200+ 条，AI 生成，覆盖更全</td></tr>
+              <tr><td>经验沉淀</td><td>靠个人记忆，人走经验走</td><td>持续写入知识库，团队永久共有</td></tr>
+              <tr><td>可复用性</td><td>每次重新设计，重复劳动</td><td>基线用例直接复用，越用越快</td></tr>
+            </tbody>
+          </table>
+          <div class="highlight-quote" style="font-size:13px">一句话：同样一件事，兄弟公司需要一个人做 12 天，深圳公司 1 小时完成，覆盖更全、记录更完整、质量更高。</div>
+          <p class="report-p" style="margin-top:12px">这个差距，随着工具推广范围扩大，<strong>只会越来越大</strong>。</p>
+        </div>
+
+        <div class="strategy-block">
+          <h3 class="strategy-h3">三、规模化应用后，深圳公司能领先到什么程度</h3>
+
+          <!-- 关键数据大字 -->
+          <div class="big-stats">
+            <div class="big-stat">
+              <div class="big-num">90%+</div>
+              <div class="big-desc">重复性工作量释放</div>
+            </div>
+            <div class="big-stat-divider"></div>
+            <div class="big-stat">
+              <div class="big-num">4×</div>
+              <div class="big-desc">同等人力产出倍数</div>
+            </div>
+            <div class="big-stat-divider"></div>
+            <div class="big-stat">
+              <div class="big-num">0</div>
+              <div class="big-desc">新增编制需求</div>
+            </div>
+            <div class="big-stat-divider"></div>
+            <div class="big-stat">
+              <div class="big-num">∞</div>
+              <div class="big-desc">知识库持续积累，永不流失</div>
+            </div>
+          </div>
+
+          <div class="advantage-grid">
+            <div class="advantage-card">
+              <div class="advantage-label">降本端</div>
+              <ul class="report-list">
+                <li>每个测试工程师释放 90%+ 的重复性工作量</li>
+                <li>同等人力，产出是其他公司的数倍</li>
+                <li>不需要扩编，现有团队即可承接更大的业务体量</li>
+              </ul>
+            </div>
+            <div class="advantage-card">
+              <div class="advantage-label">增效端</div>
+              <ul class="report-list">
+                <li>每次业务迭代，AI 自动推荐回归范围，测试不再是交付瓶颈</li>
+                <li>测试报告、缺陷追踪完整留档，质量数据随时可查、随时可汇报</li>
+                <li>知识库持续积累，新人上手快、老人离职不带走经验</li>
+              </ul>
+            </div>
+          </div>
+          <div class="highlight-quote" style="margin-top:20px">各兄弟公司目前没有这套能力。等他们意识到要追，深圳公司的知识库、用例库、方法论已经沉淀了大半年——这个先发优势，是追不上的。</div>
+          <p class="report-p" style="margin-top:12px">这意味着深圳公司不只是今年领先，而是构建了一条<strong>持续拉大的护城河</strong>。</p>
+        </div>
+
+        <div class="strategy-block">
+          <h3 class="strategy-h3">四、落地路线：4 个月，成为集团标杆</h3>
+
+          <!-- 甘特图式时间线 -->
+          <div class="gantt-wrap">
+            <div class="gantt-row">
+              <div class="gantt-phase">04月</div>
+              <div class="gantt-bar-track"><div class="gantt-bar" style="width:100%;background:rgba(91,155,213,0.25)"><span>环境搭建 · 工具跑通 · 基础验证</span></div></div>
+            </div>
+            <div class="gantt-row">
+              <div class="gantt-phase">05月</div>
+              <div class="gantt-bar-track"><div class="gantt-bar" style="width:100%;background:rgba(91,155,213,0.45)"><span>试点业务 · AI vs 人工对比 · 出数据</span></div></div>
+            </div>
+            <div class="gantt-row">
+              <div class="gantt-phase">06月</div>
+              <div class="gantt-bar-track"><div class="gantt-bar" style="width:100%;background:rgba(91,155,213,0.65)"><span>正式替代人工 · 业务验收 · AI报告</span></div></div>
+            </div>
+            <div class="gantt-row">
+              <div class="gantt-phase gantt-phase-star">07月</div>
+              <div class="gantt-bar-track"><div class="gantt-bar" style="width:100%;background:#5b9bd5"><span style="color:#fff;font-weight:700">稳定运行 · 方法论输出 · 集团标杆</span></div></div>
+            </div>
+          </div>
+
+          <table class="arch-table" style="width: 100%; margin: 16px 0">
+            <thead><tr><th>阶段</th><th>时间</th><th>目标</th></tr></thead>
+            <tbody>
+              <tr><td>第一阶段</td><td>04 月</td><td>环境搭建，工具跑通，基础能力验证</td></tr>
+              <tr><td>第二阶段</td><td>05 月</td><td>试点业务，AI vs 人工对比，出数据</td></tr>
+              <tr><td>第三阶段</td><td>06 月</td><td>正式替代人工参与业务验收，输出 AI 测试报告</td></tr>
+              <tr style="font-weight:600;background:rgba(91,155,213,0.08)"><td>第四阶段</td><td>07 月</td><td>稳定运行，方法论整理，形成可向兄弟公司推广的标准样板</td></tr>
+            </tbody>
+          </table>
+          <p class="report-p">07 月底，深圳公司将拥有：一套跑通的 AI 测试体系 · 一份可量化的提效数据报告 · 一套其他公司可以来学习的实践经验</p>
+        </div>
+
+        <div class="strategy-block">
+          <h3 class="strategy-h3">五、推进这件事，需要的支持</h3>
+
+          <div class="support-item">
+            <div class="support-num">1</div>
+            <div>
+              <div class="support-title">测试环境与接口权限</div>
+              <p class="report-p">准入系统独立测试环境支持，开发侧配合提供业务文档与接口对接。</p>
+            </div>
+          </div>
+
+          <div class="support-item">
+            <div class="support-num">2</div>
+            <div>
+              <div class="support-title">成立虚拟专项小组（自有人员，3～4 人）</div>
+              <table class="arch-table" style="width: 100%; margin: 12px 0">
+                <thead><tr><th>职责方向</th><th>具体工作</th></tr></thead>
+                <tbody>
+                  <tr><td>跨部门协调</td><td>对接开发、业务、测试各方，推动资源到位</td></tr>
+                  <tr><td>业务规则梳理</td><td>将各模块业务文档整理为 AI 可读格式，沉淀知识库</td></tr>
+                  <tr><td>工具用户验收测试</td><td>对工具新版本进行 UAT，确认功能符合业务预期后上线</td></tr>
+                  <tr><td>推进质量把控</td><td>跟进阶段性目标，对齐工具落地进度</td></tr>
+                  <tr><td>成果汇总输出</td><td>整理对比数据，支撑向集团汇报</td></tr>
+                </tbody>
+              </table>
+              <p class="report-p" style="font-size:12px;color:var(--text-secondary)">人员建议：3～4 人，各占 20%～30% 工时，不影响主线工作。</p>
+            </div>
+          </div>
+
+          <div class="support-item">
+            <div class="support-num">3</div>
+            <div>
+              <div class="support-title">工具开发与优化外包（约 4 人）</div>
+              <table class="arch-table" style="width: 100%; margin: 12px 0">
+                <thead><tr><th>方向</th><th>人力</th><th>主要工作</th></tr></thead>
+                <tbody>
+                  <tr><td>前端</td><td>1 人</td><td>界面功能维护与迭代</td></tr>
+                  <tr><td>后端 / Agent / 提示词</td><td>2 人</td><td>核心功能开发、AI 能力优化</td></tr>
+                  <tr><td>集成 / 工具 SIT 测试</td><td>2 人</td><td>工具集成联调、系统集成测试</td></tr>
+                </tbody>
+              </table>
+              <p class="report-p" style="font-size:12px;color:var(--text-secondary)">按方向合计需要 5 人，通过人员复用与合理排期，实际申请 4 人，整体人员使用率提升约 20%。</p>
+            </div>
+          </div>
+
+          <div class="support-item">
+            <div class="support-num">4</div>
+            <div>
+              <div class="support-title">AI Token 费用纳入公司报销</div>
+              <p class="report-p">工具研发至今已运行约两个月，累计 Token 费用已达<strong>大几千元</strong>，后续随推广范围扩大还将持续增加，申请纳入公司报销。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="strategy-block highlight-block">
+          <h3 class="strategy-h3">六、总结</h3>
+          <div class="highlight-quote">
+            深圳公司现在面临的是一个窗口期：各兄弟公司还没行动，我们已经有了可以落地的工具和方案。<br><br>
+            4 个月后，要么深圳公司站在集团 AI 应用的最前面，要么这个位置被别人占了。<br><br>
+            <strong>我们认为，这个机会值得认真推一把。</strong>
+          </div>
+          <p class="report-p" style="margin-top:16px;font-size:12px;color:var(--text-secondary)">附：工具功能已完整验证，可随时安排 Demo 演示。</p>
+        </div>
+
+      </div>
+    </section>
+
+    </div><!-- end .tab-content -->
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
+
+const activeTab = ref('strategy-report')
+
+function switchTab(tab) {
+  activeTab.value = tab
+  // 切换 Tab 后回到顶部
+  document.querySelector('.tab-content')?.scrollTo(0, 0)
+}
 
 const el1 = ref(null)
 const elSceneA = ref(null)
@@ -527,10 +999,6 @@ async function renderMermaid() {
   }
 }
 
-function scrollTo(id) {
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
 onMounted(renderMermaid)
 </script>
 
@@ -538,21 +1006,23 @@ onMounted(renderMermaid)
 /* ── 基础布局 ── */
 .story-page {
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
   background: var(--main-bg);
   color: var(--text-primary);
 }
 
-/* ── 导航锚点 ── */
+/* ── 标签导航 ── */
 .story-nav {
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
   z-index: 10;
   display: flex;
   gap: 0;
   background: var(--sidebar-bg);
   border-bottom: 1px solid var(--border-color, #e0e0e0);
   padding: 0 32px;
+  overflow-x: auto;
 }
 .story-nav-link {
   padding: 12px 20px;
@@ -561,10 +1031,23 @@ onMounted(renderMermaid)
   text-decoration: none;
   border-bottom: 2px solid transparent;
   transition: all 0.2s;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .story-nav-link:hover {
   color: #5b9bd5;
+}
+.story-nav-link.active {
+  color: #5b9bd5;
   border-bottom-color: #5b9bd5;
+  font-weight: 600;
+}
+
+/* ── 标签内容容器 ── */
+.tab-content {
+  flex: 1;
+  overflow-y: auto;
 }
 
 /* ── 通用 section ── */
@@ -716,5 +1199,275 @@ onMounted(renderMermaid)
   .phase-arrow { transform: rotate(90deg); }
   .hero-title { font-size: 22px; }
   .comparison-bar { flex-direction: column; }
+  .modes-cards { flex-direction: column; }
+  .advantage-grid { flex-direction: column; }
+  .outcome-cards { flex-direction: column; }
+}
+
+/* ── 测试模式说明 ── */
+.section-modes { background: var(--sidebar-bg); }
+
+.modes-compare { margin-bottom: 32px; overflow-x: auto; }
+.modes-table { width: 100%; }
+.modes-table th:nth-child(2) { color: #67c23a; }
+.modes-table th:nth-child(3) { color: #e6a23c; }
+
+.modes-cards { display: flex; gap: 20px; align-items: flex-start; }
+
+.mode-detail-card {
+  flex: 1;
+  background: var(--main-bg);
+  border: 1px solid var(--border-color, #e8e8e8);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.systematic-card { border-top: 3px solid #67c23a; }
+.exploratory-card { border-top: 3px solid #e6a23c; }
+
+.mode-detail-header {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border-color, #e8e8e8);
+  background: var(--el-fill-color-light, #f8f9fa);
+}
+.mode-detail-icon { font-size: 28px; }
+.mode-detail-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px; }
+.mode-detail-sub { font-size: 11px; color: var(--text-secondary); }
+
+.mode-detail-section { padding: 16px 24px; border-bottom: 1px solid var(--border-color, #f0f0f0); }
+.mode-detail-section:last-child { border-bottom: none; }
+.mode-detail-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-secondary); margin-bottom: 10px; }
+.mode-detail-text { font-size: 13px; color: var(--text-secondary); line-height: 1.7; margin: 0; }
+.mode-detail-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.mode-detail-list li { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+.tool-call-flow { display: flex; flex-direction: column; gap: 8px; }
+.tool-call-step { display: flex; gap: 10px; align-items: flex-start; font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+.tool-call-num { width: 20px; height: 20px; border-radius: 50%; background: rgba(91,155,213,0.15); color: #5b9bd5; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+
+.mode-example { background: var(--sidebar-bg); border-radius: 8px; padding: 16px; }
+.example-input { margin-bottom: 14px; }
+.example-tag { display: inline-block; background: rgba(91,155,213,0.1); color: #5b9bd5; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; margin-bottom: 6px; }
+.example-input em { display: block; font-size: 13px; color: var(--text-primary); font-style: normal; background: rgba(91,155,213,0.06); border-left: 3px solid #5b9bd5; padding: 8px 12px; border-radius: 0 4px 4px 0; }
+.example-steps { display: flex; flex-direction: column; gap: 6px; counter-reset: step; }
+.example-steps > div { font-size: 12px; color: var(--text-secondary); line-height: 1.6; padding-left: 20px; position: relative; }
+.example-steps > div::before { content: counter(step); counter-increment: step; position: absolute; left: 0; top: 1px; font-size: 10px; font-weight: 700; color: #5b9bd5; background: rgba(91,155,213,0.1); width: 15px; height: 15px; border-radius: 50%; display: flex; align-items: center; justify-content: center; line-height: 1; }
+
+/* ── AI专项汇报 ── */
+.section-project-report { background: var(--main-bg); }
+
+.report-block {
+  margin-bottom: 32px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color, #e8e8e8);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.report-h3 {
+  font-size: 14px; font-weight: 700;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-color, #e8e8e8);
+  margin: 0; color: var(--text-primary);
+  background: var(--el-fill-color-light, #f5f7fa);
+}
+.report-block > .report-p,
+.report-block > .report-list,
+.report-block > .report-list-ordered,
+.report-block > table,
+.report-block > .outcome-cards,
+.report-block > .timeline { padding: 16px 20px; }
+.report-p { font-size: 13px; color: var(--text-secondary); line-height: 1.8; margin: 0 0 10px; }
+.report-p:last-child { margin-bottom: 0; }
+.report-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.report-list li { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+.report-list-ordered { list-style: decimal; }
+
+.timeline { display: flex; flex-direction: column; gap: 0; }
+.timeline-item { padding: 16px 20px; border-bottom: 1px solid var(--border-color, #f0f0f0); }
+.timeline-item:last-child { border-bottom: none; }
+.timeline-tag { display: inline-block; background: rgba(91,155,213,0.1); color: #5b9bd5; border-radius: 4px; padding: 2px 10px; font-size: 11px; font-weight: 700; margin-bottom: 6px; }
+.timeline-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 10px; }
+.timeline-note { font-size: 12px; font-weight: 400; color: var(--text-secondary); }
+.timeline-delivery { margin-top: 10px; font-size: 12px; font-weight: 600; color: #2e7d32; background: rgba(46,125,50,0.06); border-left: 3px solid #2e7d32; padding: 6px 12px; border-radius: 0 4px 4px 0; }
+.timeline-item .report-p { padding: 0; margin-bottom: 0; }
+
+.outcome-cards { display: flex; gap: 16px; }
+.outcome-card { flex: 1; background: var(--main-bg); border: 1px solid var(--border-color, #e8e8e8); border-radius: 8px; padding: 16px; }
+.outcome-tag { font-size: 11px; font-weight: 700; color: #5b9bd5; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.outcome-card p { font-size: 13px; color: var(--text-secondary); line-height: 1.7; margin: 0; }
+
+/* ── 战略汇报 ── */
+.section-strategy-report { background: var(--sidebar-bg); }
+
+.strategy-block {
+  margin-bottom: 24px;
+  background: var(--main-bg);
+  border: 1px solid var(--border-color, #e8e8e8);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.strategy-block.highlight-block { border-color: rgba(91,155,213,0.3); background: linear-gradient(135deg, rgba(91,155,213,0.04), var(--main-bg)); }
+.strategy-h3 {
+  font-size: 14px; font-weight: 700;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-color, #e8e8e8);
+  margin: 0; color: var(--text-primary);
+  background: var(--el-fill-color-light, #f5f7fa);
+}
+.strategy-block > .report-p,
+.strategy-block > .report-list,
+.strategy-block > table,
+.strategy-block > .highlight-quote,
+.strategy-block > .advantage-grid,
+.strategy-block > .support-item { padding: 16px 20px 0; }
+.strategy-block > *:last-child { padding-bottom: 16px; }
+
+.highlight-quote {
+  font-size: 14px; font-style: italic; line-height: 1.8;
+  color: var(--text-primary);
+  border-left: 4px solid #5b9bd5;
+  padding: 12px 16px !important;
+  margin: 12px 20px !important;
+  background: rgba(91,155,213,0.06);
+  border-radius: 0 6px 6px 0;
+}
+
+.advantage-grid { display: flex; gap: 16px; }
+.advantage-card { flex: 1; background: var(--sidebar-bg); border: 1px solid var(--border-color, #e8e8e8); border-radius: 8px; padding: 16px; }
+.advantage-label { font-size: 12px; font-weight: 700; color: #5b9bd5; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.support-item { display: flex; gap: 14px; align-items: flex-start; border-top: 1px solid var(--border-color, #f0f0f0); }
+.support-item:first-of-type { border-top: none; }
+.support-num { width: 26px; height: 26px; border-radius: 50%; background: rgba(91,155,213,0.15); color: #5b9bd5; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+.support-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+.support-item > div { flex: 1; }
+
+/* ── 数据图表（领导价值页）── */
+.data-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.chart-card {
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color, #e8e8e8);
+  border-radius: 10px;
+  padding: 18px 16px;
+}
+.chart-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
+}
+.bar-chart { display: flex; flex-direction: column; gap: 10px; }
+.bar-row { display: flex; align-items: center; gap: 8px; }
+.bar-label { font-size: 11px; color: var(--text-secondary); width: 58px; flex-shrink: 0; text-align: right; }
+.bar-track { flex: 1; height: 22px; background: var(--el-fill-color, #f0f0f0); border-radius: 4px; overflow: visible; position: relative; }
+.bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; position: relative; min-width: 4px; }
+.bar-old { background: #e0e0e0; }
+.bar-new { background: linear-gradient(90deg, #5b9bd5, #3b82d5); }
+.bar-val { font-size: 11px; font-weight: 700; color: #555; white-space: nowrap; margin-left: 6px; }
+.bar-val-new { color: #fff; }
+.chart-note { margin-top: 10px; font-size: 12px; color: var(--text-secondary); text-align: center; }
+.chart-note strong { color: #5b9bd5; font-size: 14px; }
+
+/* 甜甜圈图 */
+.donut-wrap { position: relative; width: 90px; height: 90px; margin: 0 auto 8px; }
+.donut-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.donut-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+.donut-pct { display: block; font-size: 18px; font-weight: 800; color: #5b9bd5; line-height: 1.1; }
+.donut-sub { display: block; font-size: 10px; color: var(--text-secondary); }
+.donut-legend { text-align: center; font-size: 11px; color: var(--text-secondary); }
+.legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; vertical-align: middle; margin-right: 3px; }
+
+/* ── 战略汇报：VS 对比图 ── */
+.vs-chart-wrap {
+  display: flex;
+  gap: 0;
+  margin: 16px 20px;
+  background: var(--sidebar-bg);
+  border: 1px solid var(--border-color, #e8e8e8);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.vs-metric { flex: 1; padding: 16px 20px; }
+.vs-divider { width: 1px; background: var(--border-color, #e8e8e8); }
+.vs-label { font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+.vs-bars { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+.vs-bar-track { height: 18px; background: var(--el-fill-color, #f0f0f0); border-radius: 4px; overflow: hidden; margin-bottom: 4px; }
+.vs-bar-fill { height: 100%; border-radius: 4px; min-width: 4px; }
+.vs-old { background: #d0d0d0; }
+.vs-new { background: linear-gradient(90deg, #5b9bd5, #2563eb); }
+.vs-bar-text { font-size: 11px; color: var(--text-secondary); }
+.vs-new-text { color: #5b9bd5; }
+.vs-badge {
+  display: inline-block;
+  background: rgba(231,76,60,0.1);
+  color: #e74c3c;
+  border: 1px solid rgba(231,76,60,0.2);
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.vs-badge span { font-size: 15px; font-weight: 800; }
+.vs-badge-green { background: rgba(39,174,96,0.1); color: #27ae60; border-color: rgba(39,174,96,0.2); }
+
+/* ── 战略汇报：大数字 ── */
+.big-stats {
+  display: flex;
+  align-items: stretch;
+  margin: 16px 20px;
+  background: linear-gradient(135deg, rgba(91,155,213,0.06), rgba(91,155,213,0.02));
+  border: 1px solid rgba(91,155,213,0.2);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.big-stat { flex: 1; text-align: center; padding: 20px 12px; }
+.big-stat-divider { width: 1px; background: rgba(91,155,213,0.15); }
+.big-num { font-size: 36px; font-weight: 900; color: #5b9bd5; line-height: 1; margin-bottom: 8px; }
+.big-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+
+/* ── 战略汇报：甘特图 ── */
+.gantt-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 20px;
+}
+.gantt-row { display: flex; align-items: center; gap: 12px; }
+.gantt-phase {
+  width: 42px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  text-align: right;
+}
+.gantt-phase-star { color: #5b9bd5; }
+.gantt-bar-track { flex: 1; height: 32px; background: var(--el-fill-color, #f0f0f0); border-radius: 6px; overflow: hidden; }
+.gantt-bar {
+  height: 100%;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+/* ── 响应式补充 ── */
+@media (max-width: 700px) {
+  .data-charts { grid-template-columns: 1fr; }
+  .vs-chart-wrap { flex-direction: column; }
+  .vs-divider { width: 100%; height: 1px; }
+  .big-stats { flex-wrap: wrap; }
+  .big-stat { min-width: 45%; }
 }
 </style>

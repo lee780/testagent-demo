@@ -417,14 +417,6 @@ const currentMode = computed({
 const currentModelId = ref('')
 const testModes = [
   {
-    value: 'regression',
-    icon: '🔒',
-    label: '回归',
-    desc: '回归模式：运行基线用例，结果可复现，CI/CD友好',
-    color: '#5b9bd5',
-    bg: 'rgba(91,155,213,0.10)',
-  },
-  {
     value: 'systematic',
     icon: '📐',
     label: '系统化',

@@ -3,7 +3,7 @@
  * Supports three test modes, each with distinct behavior and constraints.
  */
 
-export type TestMode = 'regression' | 'systematic' | 'exploratory';
+export type TestMode = 'systematic' | 'exploratory';
 
 export interface SystemPromptParams {
   workspace: string;
@@ -16,15 +16,10 @@ export function buildSystemPrompt(params: SystemPromptParams): string {
 
   let modePrompt: string;
   switch (mode) {
-    case 'regression':
-      modePrompt = buildRegressionPrompt(params.workspace);
-      break;
-    case 'systematic':
-      modePrompt = buildSystematicPrompt(params.workspace);
-      break;
     case 'exploratory':
       modePrompt = buildExploratoryPrompt(params.workspace);
       break;
+    case 'systematic':
     default:
       modePrompt = buildSystematicPrompt(params.workspace);
   }
@@ -107,54 +102,6 @@ preconditions:
     id_check_result: "PASS"
     is_black: false
 \`\`\``;
-
-// ── 🔒 回归模式 ───────────────────────────────────────────
-
-function buildRegressionPrompt(workspace: string): string {
-  return `You are TestPilot operating in **🔒 REGRESSION MODE**.
-
-## Mode Definition
-Regression mode runs a fixed, locked baseline of test cases. Test case generation is FORBIDDEN.
-Every run must produce identical results for identical system behavior. This mode is CI/CD-friendly.
-
-## Strict Workflow (follow exactly, no deviation)
-
-**Step 1 — Locate baseline YAML files**
-→ report_progress(stage="定位基线用例", status="started")
-Search for existing YAML test case files in the following order:
-1. Any directory path the user specifies
-2. \`${workspace}/baseline/\`
-3. \`${workspace}/tc_baseline/\`
-4. The current workspace: \`${workspace}/\`
-Use: \`find <dir> -name "*.yaml" | head -20\` to locate files.
-If NO baseline YAML files exist anywhere, STOP and tell the user:
-"回归模式需要已有的基线用例文件（*.yaml）。请先使用【系统化模式】或【探索模式】生成并保存基线，或上传已有的 YAML 用例文件。"
-→ report_progress(stage="定位基线用例", status="done", detail="找到 N 个 YAML 文件")
-
-**Step 2 — Run baseline against the target system**
-→ report_progress(stage="执行回归测试", status="started")
-Call: run_test_suite(yaml_dir=<found_dir>, base_url="http://localhost:8000")
-Do NOT modify any YAML files before running.
-→ report_progress(stage="执行回归测试", status="done", detail="通过率 X%")
-
-**Step 3 — Generate summary and report results**
-→ report_progress(stage="生成报告", status="done", detail="报告已自动保存")
-After run_test_suite completes, you MUST:
-1. Write a Markdown summary covering: 执行概述、回归失败用例列表（与上次对比）、风险结论
-2. Call: \`save_summary_report(report_id=<id from run_test_suite>, content=<markdown>)\`
-3. Then share the test summary in chat: total cases run, pass rate, failed cases, any regressions.
-
-## Hard Constraints
-- NEVER generate new test cases
-- NEVER modify existing YAML files
-- NEVER call bash to run Python scripts for case generation
-- NEVER skip any baseline test case
-- After run_test_suite completes, the report is auto-saved — just summarize results to the user
-
-## Workspace
-${workspace}
-${TOOLS_SECTION}`;
-}
 
 // ── 📐 系统化模式 ─────────────────────────────────────────
 
