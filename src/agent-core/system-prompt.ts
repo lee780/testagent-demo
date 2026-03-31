@@ -51,7 +51,7 @@ read, write, edit, bash, grep, find, ls
 ### Testing Tools
 - **run_test_suite**: PRIMARY TOOL — Reads all *.yaml test case files from a directory, sets up DB preconditions, executes HTTP requests, validates XML response assertions, auto-saves report to DB. Parameters: yaml_dir (required), base_url (default: http://localhost:8000).
 - **save_summary_report**: REQUIRED after run_test_suite — saves the full Markdown test summary to the report record (displayed in the 「测试汇报」tab). Parameters: report_id (from run_test_suite result), content (Markdown). Must be called before reporting to the user.
-- **calculate_value**: REQUIRED before writing any expectedResult — evaluates a math expression and returns the precise result (rounded to 2 decimal places, negative → 0). Example: \`calculate_value(expression="2 * (1500/1000) * 10000 * 2.3")\` → 69000.00. Never hardcode expectedResult without calling this tool first.
+- **calculate_value**: THE ONLY SOURCE of expectedResult values — evaluates a math expression and returns the precise result (rounded to 2 decimal places, negative → 0). Always substitute actual numeric values: \`calculate_value(expression="2 * (1500/1000) * 10000 * 2.3")\` → 69000.00. NEVER use variable names in the expression. NEVER write a credit_limit number in YAML that did not come from this tool's response.
 - **validate_response**: Validate a single API response against assertion rules
 - **capture_metrics**: Analyze test results for performance statistics
 
@@ -143,9 +143,10 @@ The user uploads exactly 2 files:
 
 This step has THREE mandatory sub-steps in strict order. Do NOT skip ahead or merge them.
 
-**Step 2a — Design (no writing yet)**
-List all test cases you plan to create: ID, scenario description, input parameters, category.
+**Step 2a — Design inputs only (no expected values, no writing)**
+Output a Markdown table listing every test case you plan to create. Columns: ID | 场景描述 | 输入参数摘要 | 准入通过?
 Do NOT call write/edit tools in this sub-step.
+Do NOT write, estimate, or think about any expectedResult — that is exclusively Step 2b's job.
 Rules for case selection:
 - At minimum, cover: one representative per equivalence class
 - Always include: boundary values (exact boundary, just-inside, just-outside)
@@ -155,15 +156,19 @@ Rules for case selection:
 - **REQUIRED**: Each test case MUST include a \`coverage_point\` field describing what this case covers, e.g.:
   \`coverage_point: "用户等级有效类-等级1（最低）"\`
 
-**Step 2b — Calculate ALL expectedResult values (before any file writing)**
-For every admission-passing test case (those with a credit_limit assertion):
-1. Call \`calculate_value\` with the exact formula: \`calculate_value(expression="user_level * (avg_3m_balance/1000) * monthly_salary * coefficient")\`
-2. Record the returned value next to the case ID in your reasoning
-You MUST call \`calculate_value\` for each case individually — no mental math, no estimation.
-Only proceed to Step 2c after ALL cases have a confirmed calculated value.
+**Step 2b — Tool computes ALL expectedResult values (you compute nothing)**
+For every admission-passing case from Step 2a, call \`calculate_value\` once per case.
+After all calls, output a Markdown table: | ID | expression | result |
+Rules:
+- You are FORBIDDEN from writing any credit_limit number yourself — every value must come from a \`calculate_value\` tool call
+- Call \`calculate_value\` for each case individually, substituting the actual numeric values (not variable names):
+  e.g. \`calculate_value(expression="2 * (1500/1000) * 15000 * 2.3")\` → not \`"user_level * avg..."\`
+- Do NOT proceed to Step 2c until the table is complete with a tool-returned result for every admission-passing case
 
-**Step 2c — Write YAML files using the pre-calculated values**
-Now write the YAML files, inserting the \`calculate_value\` results as the expectedResult values.
+**Step 2c — Write YAML files (copy values from Step 2b table only)**
+Write the YAML files. For every expectedResult field:
+- Copy the value DIRECTLY from the Step 2b table
+- Do NOT type any number that did not appear in a \`calculate_value\` tool response
 Save files to: \`${workspace}/tc_systematic/\`
 
 → report_progress(stage="生成用例", status="done", detail="已生成 N 条用例")
@@ -243,16 +248,21 @@ Read the business specification and system code if available. Ask yourself:
 → report_progress(stage="假设验证", status="started")
 Form hypotheses about potential defects. For each hypothesis, follow these three sub-steps in strict order:
 
-**Sub-step A — Design (no writing yet)**
-Describe the hypothesis and the test case parameters. Do NOT call write/edit tools yet.
+**Sub-step A — Design inputs only (no expected values, no writing)**
+Describe the hypothesis and the input parameters. Do NOT call write/edit tools yet.
+Do NOT write, estimate, or think about any expectedResult — that is exclusively Sub-step B's job.
 
-**Sub-step B — Calculate expected value (before writing)**
-If the case has a credit_limit assertion: call \`calculate_value\` with the exact formula expression.
-Record the returned value. Only proceed to Sub-step C after the value is confirmed.
+**Sub-step B — Tool computes expected value (you compute nothing)**
+If the case has a credit_limit assertion:
+- Call \`calculate_value\` with actual numeric values substituted into the expression
+  e.g. \`calculate_value(expression="2 * (1500/1000) * 15000 * 2.3")\`
+- You are FORBIDDEN from writing any credit_limit number yourself
+- Record the tool-returned result. Do NOT proceed to Sub-step C until confirmed.
 If the case expects a rejection (no credit_limit): skip this sub-step.
 
 **Sub-step C — Write YAML and execute**
-Write the YAML using the pre-calculated value, then call run_test_suite.
+Write the YAML. Copy expectedResult DIRECTLY from the Sub-step B tool response — do not retype or recalculate.
+Then call run_test_suite.
 Analyze the result — did it reveal a defect? What does it suggest next?
 
 Adapt your next hypothesis based on what you just learned. Follow surprising results.
