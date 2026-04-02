@@ -587,94 +587,20 @@
         <h2 class="section-title">AI 测试工具项目汇报</h2>
         <p class="section-sub">汇报日期：2026 年 3 月 30 日</p>
 
+        <!-- 一 -->
         <div class="strategy-block highlight-block">
           <h3 class="strategy-h3">一、这件事对深圳公司意味着什么</h3>
           <p class="report-p">这不是一个测试工具项目，这是一个<strong>让深圳公司在集团内率先建立 AI 工程化优势的机会</strong>。</p>
-          <p class="report-p">当前，各兄弟公司（北京、上海、广州等）仍依赖传统人工测试方式——效率低、覆盖浅、经验随人员流动而流失。没有一家公司在这个方向上形成成熟的落地实践。</p>
-          <div class="highlight-quote">谁先跑通，谁就掌握了话语权。</div>
           <p class="report-p">深圳公司如果在未来 4 个月内完成 TestAgent 的规模化落地，将在集团层面形成清晰的领先优势：</p>
           <ul class="report-list">
             <li>深圳公司成为集团 <strong>AI 应用 No.1</strong>，可复制的方法论由我们输出</li>
             <li>在 AI 战略落地上拥有<strong>可量化的业绩成果</strong>，向上汇报有底气、有数据</li>
-            <li>相较于各兄弟公司，<strong>深圳公司的交付质量和效率大幅领先</strong>，差距不是一点点</li>
           </ul>
         </div>
 
+        <!-- 二 -->
         <div class="strategy-block">
-          <h3 class="strategy-h3">二、工具本身不重要，重要的是它能带来什么</h3>
-          <p class="report-p">TestAgent 是一套 AI 驱动的自动化测试工具，但我们不谈技术——<strong>我们只谈结果</strong>：</p>
-
-          <!-- 视觉对比图 -->
-          <div class="vs-chart-wrap">
-            <div class="vs-metric">
-              <div class="vs-label">单轮测试耗时</div>
-              <div class="vs-bars">
-                <div class="vs-bar-group">
-                  <div class="vs-bar-track"><div class="vs-bar-fill vs-old" style="width:100%"></div></div>
-                  <div class="vs-bar-text vs-old-text">兄弟公司 · <strong>12 人天</strong></div>
-                </div>
-                <div class="vs-bar-group">
-                  <div class="vs-bar-track"><div class="vs-bar-fill vs-new" style="width:1%"></div></div>
-                  <div class="vs-bar-text vs-new-text">深圳公司 · <strong>1 小时</strong></div>
-                </div>
-              </div>
-              <div class="vs-badge">快 <span>100倍</span></div>
-            </div>
-            <div class="vs-divider"></div>
-            <div class="vs-metric">
-              <div class="vs-label">用例覆盖量</div>
-              <div class="vs-bars">
-                <div class="vs-bar-group">
-                  <div class="vs-bar-track"><div class="vs-bar-fill vs-old" style="width:17%"></div></div>
-                  <div class="vs-bar-text vs-old-text">兄弟公司 · <strong>~50 条</strong></div>
-                </div>
-                <div class="vs-bar-group">
-                  <div class="vs-bar-track"><div class="vs-bar-fill vs-new" style="width:100%"></div></div>
-                  <div class="vs-bar-text vs-new-text">深圳公司 · <strong>200+ 条</strong></div>
-                </div>
-              </div>
-              <div class="vs-badge vs-badge-green">多 <span>3倍+</span></div>
-            </div>
-          </div>
-
-          <table class="arch-table" style="width: 100%; margin: 16px 0">
-            <thead><tr><th>维度</th><th>兄弟公司（传统方式）</th><th>深圳公司（TestAgent）</th></tr></thead>
-            <tbody>
-              <tr><td>单轮测试耗时</td><td>约 <strong>12 人天</strong></td><td><strong>1 小时以内</strong></td></tr>
-              <tr><td>用例覆盖量</td><td>约 50 条，人工编写</td><td>200+ 条，AI 生成，覆盖更全</td></tr>
-              <tr><td>经验沉淀</td><td>靠个人记忆，人走经验走</td><td>持续写入知识库，团队永久共有</td></tr>
-              <tr><td>可复用性</td><td>每次重新设计，重复劳动</td><td>基线用例直接复用，越用越快</td></tr>
-            </tbody>
-          </table>
-          <div class="highlight-quote" style="font-size:13px">一句话：同样一件事，兄弟公司需要一个人做 12 天，深圳公司 1 小时完成，覆盖更全、记录更完整、质量更高。</div>
-          <p class="report-p" style="margin-top:12px">这个差距，随着工具推广范围扩大，<strong>只会越来越大</strong>。</p>
-        </div>
-
-        <div class="strategy-block">
-          <h3 class="strategy-h3">三、规模化应用后，深圳公司能领先到什么程度</h3>
-
-          <!-- 关键数据大字 -->
-          <div class="big-stats">
-            <div class="big-stat">
-              <div class="big-num">90%+</div>
-              <div class="big-desc">重复性工作量释放</div>
-            </div>
-            <div class="big-stat-divider"></div>
-            <div class="big-stat">
-              <div class="big-num">4×</div>
-              <div class="big-desc">同等人力产出倍数</div>
-            </div>
-            <div class="big-stat-divider"></div>
-            <div class="big-stat">
-              <div class="big-num">0</div>
-              <div class="big-desc">新增编制需求</div>
-            </div>
-            <div class="big-stat-divider"></div>
-            <div class="big-stat">
-              <div class="big-num">∞</div>
-              <div class="big-desc">知识库持续积累，永不流失</div>
-            </div>
-          </div>
+          <h3 class="strategy-h3">二、规模化应用后，深圳公司能领先到什么程度</h3>
 
           <div class="advantage-grid">
             <div class="advantage-card">
@@ -694,107 +620,98 @@
               </ul>
             </div>
           </div>
-          <div class="highlight-quote" style="margin-top:20px">各兄弟公司目前没有这套能力。等他们意识到要追，深圳公司的知识库、用例库、方法论已经沉淀了大半年——这个先发优势，是追不上的。</div>
-          <p class="report-p" style="margin-top:12px">这意味着深圳公司不只是今年领先，而是构建了一条<strong>持续拉大的护城河</strong>。</p>
+
+          <p class="report-p" style="padding: 0 20px; margin-top: 16px; font-weight: 600;">用数据说话</p>
+          <table class="arch-table" style="width: calc(100% - 40px); margin: 8px 20px 0">
+            <thead><tr><th>维度</th><th>兄弟公司（传统方式）</th><th>深圳公司（TestAgent）</th></tr></thead>
+            <tbody>
+              <tr><td>单轮测试耗时</td><td>约 <strong>12 人天</strong></td><td style="color:#059669;font-weight:700">1 小时以内</td></tr>
+              <tr><td>用例覆盖量</td><td>约 50 条，人工编写</td><td style="color:#059669;font-weight:700">200+ 条，AI 生成，覆盖更全</td></tr>
+              <tr><td>经验沉淀</td><td>靠个人记忆，人走经验走</td><td style="color:#059669;font-weight:700">持续写入知识库，团队永久共有</td></tr>
+              <tr><td>下次复用</td><td>每次重新设计，重复劳动</td><td style="color:#059669;font-weight:700">基线用例直接复用，越用越快</td></tr>
+            </tbody>
+          </table>
         </div>
 
+        <!-- 三 -->
         <div class="strategy-block">
-          <h3 class="strategy-h3">四、落地路线：4 个月，成为集团标杆</h3>
+          <h3 class="strategy-h3">三、落地路线：4 个月，成为集团标杆</h3>
 
-          <!-- 甘特图式时间线 -->
           <div class="gantt-wrap">
             <div class="gantt-row">
-              <div class="gantt-phase">04月</div>
+              <div class="gantt-phase" style="width:56px;line-height:1.3;text-align:right">
+                <div>阶段1</div>
+                <div style="font-size:10px;font-weight:400;color:var(--text-secondary)">4月30日</div>
+              </div>
               <div class="gantt-bar-track"><div class="gantt-bar" style="width:100%;background:rgba(91,155,213,0.25)"><span>环境搭建 · 工具跑通 · 基础验证</span></div></div>
             </div>
             <div class="gantt-row">
-              <div class="gantt-phase">05月</div>
+              <div class="gantt-phase" style="width:56px;line-height:1.3;text-align:right">
+                <div>阶段2</div>
+                <div style="font-size:10px;font-weight:400;color:var(--text-secondary)">5月31日</div>
+              </div>
               <div class="gantt-bar-track"><div class="gantt-bar" style="width:100%;background:rgba(91,155,213,0.45)"><span>试点业务 · AI vs 人工对比 · 出数据</span></div></div>
             </div>
             <div class="gantt-row">
-              <div class="gantt-phase">06月</div>
+              <div class="gantt-phase" style="width:56px;line-height:1.3;text-align:right">
+                <div>阶段3</div>
+                <div style="font-size:10px;font-weight:400;color:var(--text-secondary)">6月30日</div>
+              </div>
               <div class="gantt-bar-track"><div class="gantt-bar" style="width:100%;background:rgba(91,155,213,0.65)"><span>正式替代人工 · 业务验收 · AI报告</span></div></div>
             </div>
             <div class="gantt-row">
-              <div class="gantt-phase gantt-phase-star">07月</div>
+              <div class="gantt-phase gantt-phase-star" style="width:56px;line-height:1.3;text-align:right">
+                <div>阶段4</div>
+                <div style="font-size:10px;font-weight:400;color:#5b9bd5">7月31日</div>
+              </div>
               <div class="gantt-bar-track"><div class="gantt-bar" style="width:100%;background:#5b9bd5"><span style="color:#fff;font-weight:700">稳定运行 · 方法论输出 · 集团标杆</span></div></div>
             </div>
           </div>
-
-          <table class="arch-table" style="width: 100%; margin: 16px 0">
-            <thead><tr><th>阶段</th><th>时间</th><th>目标</th></tr></thead>
-            <tbody>
-              <tr><td>第一阶段</td><td>04 月</td><td>环境搭建，工具跑通，基础能力验证</td></tr>
-              <tr><td>第二阶段</td><td>05 月</td><td>试点业务，AI vs 人工对比，出数据</td></tr>
-              <tr><td>第三阶段</td><td>06 月</td><td>正式替代人工参与业务验收，输出 AI 测试报告</td></tr>
-              <tr style="font-weight:600;background:rgba(91,155,213,0.08)"><td>第四阶段</td><td>07 月</td><td>稳定运行，方法论整理，形成可向兄弟公司推广的标准样板</td></tr>
-            </tbody>
-          </table>
-          <p class="report-p">07 月底，深圳公司将拥有：一套跑通的 AI 测试体系 · 一份可量化的提效数据报告 · 一套其他公司可以来学习的实践经验</p>
         </div>
 
+        <!-- 四 -->
         <div class="strategy-block">
-          <h3 class="strategy-h3">五、推进这件事，需要的支持</h3>
+          <h3 class="strategy-h3">四、需要的支持（4 件事）</h3>
 
-          <div class="support-item">
-            <div class="support-num">1</div>
-            <div>
-              <div class="support-title">测试环境与接口权限</div>
-              <p class="report-p">准入系统独立测试环境支持，开发侧配合提供业务文档与接口对接。</p>
+          <div class="support-row">
+            <div class="support-item">
+              <div>
+                <div class="support-title">① 测试环境与接口权限</div>
+                <p class="report-p">准入系统独立测试环境支持，开发侧配合提供业务文档与接口对接。</p>
+              </div>
+            </div>
+            <div class="support-item">
+              <div>
+                <div class="support-title">② AI Token 费用纳入公司报销</div>
+                <p class="report-p">工具已运行约两个月，累计费用已达<strong>大几千元</strong>，随推广范围扩大持续增加，申请纳入公司报销。</p>
+              </div>
             </div>
           </div>
 
-          <div class="support-item">
-            <div class="support-num">2</div>
-            <div>
-              <div class="support-title">成立虚拟专项小组（自有人员，3～4 人）</div>
-              <table class="arch-table" style="width: 100%; margin: 12px 0">
-                <thead><tr><th>职责方向</th><th>具体工作</th></tr></thead>
-                <tbody>
-                  <tr><td>跨部门协调</td><td>对接开发、业务、测试各方，推动资源到位</td></tr>
-                  <tr><td>业务规则梳理</td><td>将各模块业务文档整理为 AI 可读格式，沉淀知识库</td></tr>
-                  <tr><td>工具用户验收测试</td><td>对工具新版本进行 UAT，确认功能符合业务预期后上线</td></tr>
-                  <tr><td>推进质量把控</td><td>跟进阶段性目标，对齐工具落地进度</td></tr>
-                  <tr><td>成果汇总输出</td><td>整理对比数据，支撑向集团汇报</td></tr>
-                </tbody>
-              </table>
-              <p class="report-p" style="font-size:12px;color:var(--text-secondary)">人员建议：3～4 人，各占 20%～30% 工时，不影响主线工作。</p>
+          <div class="support-row">
+            <div class="support-item">
+              <div>
+                <div class="support-title">③ 成立虚拟专项小组（自有人员，3～4 人，各占 30%～40% 工时）</div>
+                <p class="report-p">跨部门协调与推进、知识库建设、工具验收与汇报。</p>
+              </div>
             </div>
-          </div>
-
-          <div class="support-item">
-            <div class="support-num">3</div>
-            <div>
-              <div class="support-title">工具开发与优化外包（约 4 人）</div>
-              <table class="arch-table" style="width: 100%; margin: 12px 0">
-                <thead><tr><th>方向</th><th>人力</th><th>主要工作</th></tr></thead>
-                <tbody>
-                  <tr><td>前端</td><td>1 人</td><td>界面功能维护与迭代</td></tr>
-                  <tr><td>后端 / Agent / 提示词</td><td>2 人</td><td>核心功能开发、AI 能力优化</td></tr>
-                  <tr><td>集成 / 工具 SIT 测试</td><td>2 人</td><td>工具集成联调、系统集成测试</td></tr>
-                </tbody>
-              </table>
-              <p class="report-p" style="font-size:12px;color:var(--text-secondary)">按方向合计需要 5 人，通过人员复用与合理排期，实际申请 4 人，整体人员使用率提升约 20%。</p>
-            </div>
-          </div>
-
-          <div class="support-item">
-            <div class="support-num">4</div>
-            <div>
-              <div class="support-title">AI Token 费用纳入公司报销</div>
-              <p class="report-p">工具研发至今已运行约两个月，累计 Token 费用已达<strong>大几千元</strong>，后续随推广范围扩大还将持续增加，申请纳入公司报销。</p>
+            <div class="support-item">
+              <div>
+                <div class="support-title">④ 工具开发与优化（小李开发主力 + 合作公司 4～5 人）</div>
+                <p class="report-p">前端界面迭代、后端 / Agent / 提示词核心开发、集成与工具 SIT 测试。</p>
+              </div>
             </div>
           </div>
         </div>
 
+        <!-- 五 -->
         <div class="strategy-block highlight-block">
-          <h3 class="strategy-h3">六、总结</h3>
+          <h3 class="strategy-h3">五、总结</h3>
           <div class="highlight-quote">
-            深圳公司现在面临的是一个窗口期：各兄弟公司还没行动，我们已经有了可以落地的工具和方案。<br><br>
-            4 个月后，要么深圳公司站在集团 AI 应用的最前面，要么这个位置被别人占了。<br><br>
-            <strong>我们认为，这个机会值得认真推一把。</strong>
+            窗口期就在这 4 个月。各兄弟公司还没行动，我们已有可以落地的工具和方案。<br>
+            <strong>这个机会，值得认真推一把。</strong>
           </div>
-          <p class="report-p" style="margin-top:16px;font-size:12px;color:var(--text-secondary)">附：工具功能已完整验证，可随时安排 Demo 演示。</p>
+          <p class="report-p" style="margin-top:8px;font-size:12px;color:var(--text-secondary)">附：工具功能已完整验证，可随时安排 Demo 演示。</p>
         </div>
 
       </div>
@@ -1320,9 +1237,12 @@ onMounted(renderMermaid)
 .strategy-block > .report-list,
 .strategy-block > table,
 .strategy-block > .highlight-quote,
-.strategy-block > .advantage-grid,
-.strategy-block > .support-item { padding: 16px 20px 0; }
+.strategy-block > .advantage-grid { padding: 16px 20px 0; }
 .strategy-block > *:last-child { padding-bottom: 16px; }
+.support-row { display: flex; gap: 12px; margin: 10px 20px 0; align-items: stretch; }
+.strategy-block > .support-row:first-of-type { margin-top: 16px; }
+.strategy-block > .support-row:last-of-type { margin-bottom: 16px; }
+.support-row > .support-item { flex: 1; margin: 0; }
 
 .highlight-quote {
   font-size: 14px; font-style: italic; line-height: 1.8;
@@ -1338,9 +1258,7 @@ onMounted(renderMermaid)
 .advantage-card { flex: 1; background: var(--sidebar-bg); border: 1px solid var(--border-color, #e8e8e8); border-radius: 8px; padding: 16px; }
 .advantage-label { font-size: 12px; font-weight: 700; color: #5b9bd5; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-.support-item { display: flex; gap: 14px; align-items: flex-start; border-top: 1px solid var(--border-color, #f0f0f0); }
-.support-item:first-of-type { border-top: none; }
-.support-num { width: 26px; height: 26px; border-radius: 50%; background: rgba(91,155,213,0.15); color: #5b9bd5; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+.support-item { display: flex; gap: 14px; align-items: flex-start; border: 1px solid var(--border-color, #e8e8e8); border-left: 3px solid #5b9bd5; border-radius: 8px; padding: 14px 16px; }
 .support-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
 .support-item > div { flex: 1; }
 

@@ -38,9 +38,12 @@ const OUTPUT_SPEC_SECTION = `
 ## 【输出规范】
 
 ### 完成标准
-测试执行完毕即为完成。run_test_suite 执行成功后，报告会**自动保存到报告库**，用户可在「测试报告」页面查看。
+测试执行完毕即为完成。run_test_suite 执行成功后：
+1. 必须调用 save_summary_report 保存 Markdown 测试汇报（显示在报告详情「测试汇报」Tab）
+2. 报告会**自动保存到报告库**，用户可在「测试报告」页面查看
+3. 最后在聊天中向用户汇报摘要（通过率、失败用例列表）
 
-你无需生成任何文件，无需调用任何输出工具。执行完 run_test_suite 后，直接向用户汇报摘要（通过率、失败用例列表）即可。`;
+你无需生成 HTML 等额外文件，但必须调用 save_summary_report 保存汇报正文。`;
 
 const TOOLS_SECTION = `
 ## Available Tools
